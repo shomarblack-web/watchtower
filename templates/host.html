@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Watchtower — Host Console</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">WHITE MARTIAN <span>&reg;</span><small>WATCHTOWER — HOST CONSOLE</small></div>
+  <div style="display:flex; align-items:center; gap:12px">
+    <button class="btn-ghost" style="width:auto;margin:0;padding:8px 14px" title="Narration scripts" onclick="openPrompts()">Prompts</button>
+    <div class="mono" id="conn-status" style="font-size:12px;color:var(--muted)">connecting…</div>
+  </div>
+</div>
+
+<div class="strip-wrap">
+  <span class="strip-label">Round</span>
+  <div class="led-row" id="round-strip"></div>
+  <span class="strip-label">Phase</span>
+  <div class="led-row" id="phase-strip"></div>
+</div>
+
+<div class="strip-wrap pack-strip-wrap">
+  <span class="strip-label">Card Packs</span>
+  <div class="pack-row" id="pack-row"></div>
+</div>
+
+<div class="layout">
+  <div>
+    <div class="panel">
+      <h3>Roster</h3>
+      <div id="roster"></div>
+    </div>
+  </div>
+
+  <div>
+    <div class="panel">
+      <h3>Players</h3>
+      <div id="players-list"><div class="empty">Waiting for players to join…</div></div>
+      <div style="display:flex; gap:8px; margin-top:10px">
+        <button class="btn-primary" id="start-btn" title="Lock the roster" onclick="socket.emit('start_game')" style="margin:0">Start</button>
+        <button class="btn-ghost" id="shuffle-btn" title="Randomly assign characters" onclick="doShuffle()" disabled style="margin:0">Shuffle</button>
+      </div>
+      <div id="shuffle-error" class="shuffle-error" style="display:none"></div>
+    </div>
+
+    <div class="panel">
+      <h3>Vote Tally <span class="mono" id="vote-count" style="color:var(--muted)"></span></h3>
+      <div id="tally"><div class="empty">No votes cast this phase.</div></div>
+      <button class="btn-ghost" title="Reset vote tally" onclick="socket.emit('reset_votes')">Clear votes</button>
+    </div>
+
+    <div class="panel">
+      <h3>Activity</h3>
+      <div id="activity"><div class="empty">Nothing yet.</div></div>
+    </div>
+
+    <div class="panel">
+      <h3>DCEU Map</h3>
+      <button class="btn-ghost" title="Open location map" onclick="toggleMap()" id="map-toggle-btn">Open map</button>
+      <button class="btn-ghost" title="Refill all shields" onclick="socket.emit('recharge_shields')">Recharge all shields +1</button>
+      <button class="btn-ghost" title="Start discussion timer" onclick="openTimer(timerSeconds > 0 ? timerSeconds : 2*60, 'Discuss!')">Discuss! timer</button>
+    </div>
+
+    <div class="panel">
+      <button class="btn-ghost" title="Reset entire game" onclick="if(confirm('Start a brand new game? This resets everyone.')) socket.emit('new_game')">New game</button>
+    </div>
+  </div>
+</div>
+
+<div id="map-overlay" class="map-overlay" style="display:none">
+  <div class="map-modal">
+    <div class="map-modal-head">
+      <h3 style="margin:0">The DC Universe</h3>
+      <button class="btn-ghost" style="width:auto;padding:6px 12px" onclick="toggleMap()">Close</button>
+    </div>
+    <div id="map-grid"></div>
+  </div>
+</div>
+
+<div id="card-overlay" class="map-overlay" style="display:none" onclick="if(event.target===this) closeCard()">
+  <div class="card-modal">
+    <div class="map-modal-head">
+      <h3 style="margin:0" id="card-name">—</h3>
+      <button class="btn-ghost" style="width:auto;padding:6px 12px" onclick="closeCard()">Close</button>
+    </div>
+    <div id="card-body"></div>
+  </div>
+</div>
+
+<div id="timer-overlay" class="map-overlay" style="display:none">
+  <div class="timer-modal">
+    <div class="map-modal-head">
+      <h3 style="margin:0" id="timer-title">Discuss!</h3>
+      <button class="btn-ghost" style="width:auto;padding:6px 12px" onclick="closeTimer()">Close</button>
+    </div>
+    <div class="timer-display mono" id="timer-display">02:00</div>
+    <div class="timer-controls">
+      <button class="btn-ghost" id="timer-toggle-btn" onclick="toggleTimer()">Pause</button>
+      <button class="btn-ghost" onclick="resetTimer()">Reset</button>
+      <button class="btn-ghost" onclick="adjustTimer(60)">+1 min</button>
+    </div>
+  </div>
+</div>
+
+<div id="prompts-overlay" class="map-overlay" style="display:none" onclick="if(event.target===this) closePrompts()">
+  <div class="card-modal">
+    <div class="map-modal-head">
+      <h3 style="margin:0">Prompts — Talk Like a Hero</h3>
+      <button class="btn-ghost" style="width:auto;padding:6px 12px" onclick="closePrompts()">Close</button>
+    </div>
+    <div id="prompts-body"></div>
+  </div>
+</div>
+
+<div id="phase-script-overlay" class="map-overlay" style="display:none" onclick="if(event.target===this) closePhaseScript()">
+  <div class="card-modal phase-script-modal">
+    <div class="map-modal-head">
+      <h3 style="margin:0" id="phase-script-title">Phase</h3>
+      <button class="btn-ghost" style="width:auto;padding:6px 12px" onclick="closePhaseScript()">Close</button>
+    </div>
+    <div id="phase-script-body"></div>
+  </div>
+</div>
+
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script>
+  const CHARACTERS = {{ characters | tojson }};
+  const TEAM_LABELS = {{ team_labels | tojson }};
+  const TEAM_COLORS = {{ team_colors | tojson }};
+  const PHASES = {{ phases | tojson }};
+  const NUM_ROUNDS = {{ num_rounds }};
+  const DCEU_GRID = {{ dceu_grid | tojson }};
+  const COLUMN_COLORS = {{ column_colors | tojson }};
+  const CARDS = {{ cards | tojson }};
+  const PROMPTS = {{ prompts | tojson }};
+  const INTRO_SCRIPT = {{ intro_script | tojson }};
+  const PACKS = {{ packs | tojson }};
+</script>
+<script src="/static/host.js"></script>
+</body>
+</html>

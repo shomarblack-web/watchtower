@@ -1,0 +1,873 @@
+{
+  "superman": {
+    "signal": "SIGNAL - 'S' on chest",
+    "role": "TYPE - Hero, Protector",
+    "abilities": [
+      "PASSIVE ABILITY. Under a Yellow Sun. Superman must be targeted thrice for elimination.",
+      "ACTIVE ABILITY. Non-Human Shield. Superman may shield one other player from elimination (Protect!).",
+      "SUPER ABILITY. Heat Vision. Superman accuses one player of being Martian (Accuse!)",
+      "SUPER ABILITY. X-Ray Vision.  Superman targets one player. Watchtower must reveal if that player is Martian. (Inspect!)"
+    ],
+    "strategy": "STRATEGY. Protect Civilians from elimination."
+  },
+  "wonder_woman": {
+    "signal": "SIGNAL - three fingers in 'W'",
+    "role": "TYPE - Hero, Inspector",
+    "abilities": [
+      "PASSIVE ABILITY. Amazonian Fortitude. Player must be targeted twice for elimination.",
+      "ACTIVE ABILITY. Lasso of Truth. Wonder Woman targets one other player. Watchtower must tell Wonder Woman if that player is a White Martian. (Inspect!)",
+      "SUPER ABILITY. Bulletproof Bracelets. Player may declare identity of all White Martians. (Accuse!)"
+    ],
+    "strategy": "STRATEGY: Expose! White Martians."
+  },
+  "batman": {
+    "signal": "SIGNAL - make horns",
+    "role": "TYPE - Hero",
+    "abilities": [
+      "PASSIVE ABILITY. World's Greatest Detective. Player only shuts their eyes during Eliminate! phase. Batman cannot communicate via Telepathic Link.",
+      "PASSIVE ABILITY. Because I'm Batman. Batman must be targeted twice for elimination.",
+      "ACTIVE ABILITY. Billionaire Playboy. Batman may lie to any Accuser once, unless that player is The Riddler. (Accuse!)"
+    ],
+    "strategy": "STRATEGY: Get Civilians into Watchtower. Confuse Villains.."
+  },
+  "the_flash": {
+    "signal": "SIGNAL - Z or zig-zag",
+    "role": "TYPE - Hero, Protector",
+    "abilities": [
+      "PASSIVE ABILITY. Run for Your Life. Player must be targeted twice for elimination.",
+      "ACTIVE ABILITY: Fastest Man Alive. Target one player. Player switches seats with target. (Protect!)",
+      "SUPER ABILITY. Altering the Timeline. Player may cancel results of previous Vote! Phase, and initiate new Vote! Phase. (Rescue!)"
+    ],
+    "strategy": "STRATEGY: Keep White Martians out of the Watchtower. Protect Civilians from elimination."
+  },
+  "green_lantern": {
+    "signal": "SIGNAL - stop sign/open hand",
+    "role": "TYPE - Hero, Protector",
+    "abilities": [
+      "PASSIVE ABILITY. Force Field. Green Lantern must be targeted twice for elimination.",
+      "PASSIVE ABILITY. Green Lantern\u2019s Light. Each target beside player is shielded until player is moved/eliminated.",
+      "ACTIVE ABILITY. Flight. Targets one player. Player and target are immediately Rescued (MOGO). (Rescue!)",
+      "SUPER ABILITY. Construct. Player may create one new rule that all players must follow until end of game. (Discuss!)"
+    ],
+    "strategy": "STRATEGY: Get Civilians into Watchtower."
+  },
+  "black_lightning": {
+    "signal": "SIGNAL - jazz hands",
+    "role": "TYPE - Hero, Accuser",
+    "abilities": [
+      "PASSIVE ABILITY. Static Shield. Player must be targeted twice for elimination.",
+      "ACTIVE ABILITY. Spark the Flame. Player may accuse one other player of being Martian. If that player is Martian (Green or White) that player is now Exposed!",
+      "SUPER ABILITY. Super Volt. Up to two targets to players right and up to two targets on player\u2019s right must self identify (Accuse!)"
+    ],
+    "strategy": "STRATEGY: Expose! the White Martian(s) ."
+  },
+  "captain_marvel": {
+    "signal": "SIGNAL - snap your fingers once",
+    "role": "TYPE - Hero, Protector",
+    "abilities": [
+      "PASSIVE ABILITY. Earth's Mightiest Mortal. Captain Marvel must be targeted three times for elimination.",
+      "ACTIVE ABILITY. Shazam!. Captain Marvel must answer 'No' to any accusation. Player\u2019s answer is always treated as true. (Accuse!)",
+      "ACTIVE ABILITY. Human Shield. Captain Marvel may shield one other player. (Protect!)"
+    ],
+    "strategy": "STRATEGY: Protect Civilians from elimination."
+  },
+  "martian_manhunter": {
+    "signal": "SIGNAL - arms crossed",
+    "role": "TYPE - Hero, Martian (Green)",
+    "abilities": [
+      "PASSIVE ABILITY. Alien Telepath. Player knows the identity of all White Martians.",
+      "ACTIVE ABILITY. Telepathic Link. Target one player. Player must self-identify to target. Target must then signal their role to player (10s). (Inspect!)",
+      "SUPER ABILITY. Telepathic Team. Player may signal Watchtower to reveal Telepathically Linked characters to each other. (Inspect!)"
+    ],
+    "strategy": "STRATEGY: Reveal Heroes/White Martians to Heroes."
+  },
+  "vibe": {
+    "signal": "SIGNAL - ???",
+    "role": "TYPE - Hero, Protector",
+    "abilities": [
+      "PASSIVE ABILITY. Vibe the Future. Player must be targeted twice for elimination.",
+      "ACTIVE ABILITY. Not Today Satan. Pick a number 0-10. Choose a color R-V. Player moves to that zone. (Rescue!)",
+      "ACTIVE ABILITY. My Plus One. Pick a number 0-10. Choose a color R-V. Target one player. Player and target move to that zone. (Rescue! phase only)",
+      "SUPER ABILITY. Vibe the Multiverse. Player may check Zone grid (10s). (Inspect!)"
+    ],
+    "strategy": "STRATEGY: Direction."
+  },
+  "swamp_thing": {
+    "signal": "SIGNAL:",
+    "role": "TYPE:",
+    "abilities": [
+      "PASSIVE ABILITY. Protect The Green. Player is treated as a Safe Zone!",
+      "ACTIVE ABILITY. Welcome to The Green. Target one player. Player is now Rescued! (The Green) (Rescue!)",
+      "SMPTHINGER ABILITY. Name. Description. (Phase!)"
+    ],
+    "strategy": "STRATEGY: Direction."
+  },
+  "zatanna": {
+    "signal": "SIGNAL - tip your hat",
+    "role": "TYPE - Hero, Protector",
+    "abilities": [
+      "ACTIVE ABILITY. Cigam Dleihs. Player may shield self or another player. (Protect!)",
+      "ACTIVE ABILITY. Yllis Tibbar. Target one player. Target is now a rabbit. Target cannot act for one round. (Inspect!)",
+      "SUPER ABILITY. Thgiels fo Dnah. Player may look at Secret Identity sheet (10s). (Inspect!)",
+      "SUPER ABILITY. Won Ouy Ees Em\u2026 Player may teleport self to any zone. (Rescue!)"
+    ],
+    "strategy": "STRATEGY: Direction."
+  },
+  "hawkman": {
+    "signal": "SIGNAL -",
+    "role": "TYPE -",
+    "abilities": [
+      "PASSIVE ABILITY. Reincarnation. If Eliminated, player returns to game after one round.",
+      "ACTIVE ABILITY. Nth Metal Mace. At start of Accuse! phase, target one player. Target cannot Accuse! this phase.",
+      "ACTIVE ABILITY. Nth Metal Harness - Can move self plus one  target to Thanagar.",
+      "ACTIVE ABILITY. Timeless Love. During Inspect phase, target one player. If that player is Kendra Saunders, that player is now HAWKWOMAN."
+    ],
+    "strategy": "STRATEGY: Negate Villains. Find Kendra."
+  },
+  "the_spectre": {
+    "signal": "SIGNAL - cover your eyes",
+    "role": "TYPE - Anti-Hero",
+    "abilities": [
+      "PASSIVE ABILITY. Back from Beyond\u2026 The 1st eliminated Civilian/Bystander receives this card.",
+      "PASSIVE ABILITY. Human Host. Spectre must be targeted twice for elimination.",
+      "PASSIVE ABILITY. Spirit of Vengeance. Player knows identities of all Martians and Villains. (Report!)",
+      "SUPER ABILITY. Divine Retribution. Target one player. That player is eliminated. (Eliminate!)"
+    ],
+    "strategy": "STRATEGY: Eliminate Villains/White Martians.."
+  },
+  "plastic_man": {
+    "signal": "SIGNAL - wiggle/wobble",
+    "role": "TYPE - Hero, Protector",
+    "abilities": [
+      "PASSIVE ABILITY. Malleable Mind. Player cannot be eliminated (White Martians).",
+      "ACTIVE ABILITY. Master of Disguise. Player cannot be targeted this round.",
+      "ACTIVE ABILITY. Group Hug. Player may shield two players to the left or to the right.",
+      "SUPER ABILITY. Petty Thief. Player may look at Secret Identity roster (10s)."
+    ],
+    "strategy": "STRATEGY: Protect Civilians."
+  },
+  "booster_gold": {
+    "signal": "SIGNAL - ???",
+    "role": "TYPE - Hero, Protector",
+    "abilities": [
+      "PASSIVE ABILITY. Time Traveller. Knows identity of all heroes.",
+      "PASSIVE ABILITY. Power Suit. Player must be targeted twice for elimination.",
+      "ACTIVE ABILITY. Legion Flight Ring. Target one player. Player and target move to any zone. (Rescue!)",
+      "ACTIVE ABILITY. Gloryhound. May accuse one player of being TYPE - Hero. If correct, gains 3 protects this round. (Accuse!)"
+    ],
+    "strategy": "STRATEGY: Protect Civilians."
+  },
+  "lex_luthor": {
+    "signal": "SIGNAL:",
+    "role": "TYPE - Villain",
+    "abilities": [
+      "PASSIVE ABILITY. Trusted Ally. Luthor knows identity of LACKEY.",
+      "ACTIVE ABILITY. Kryptonite. Target one player. Player accuses target of being Superman."
+    ],
+    "strategy": "STRATEGY: Expose! Superman."
+  },
+  "lena_luthor": {
+    "signal": "SIGNAL:",
+    "role": "TYPE - Villain",
+    "abilities": [
+      "PASSIVE ABILITY. Trusted Ally. Luthor knows identity of LACKEY.",
+      "ACTIVE ABILITY. Kryptonite. Target one player. Player accuses target of being Superman."
+    ],
+    "strategy": "STRATEGY: Expose! Superman."
+  },
+  "reverse_flash": {
+    "signal": "SIGNAL:",
+    "role": "TYPE - Villain",
+    "abilities": [
+      "PASSIVE ABILITY. Name. Player must be targeted -ICE for elimination.",
+      "ACTIVE ABILITY. Not So Fast. Target a player targeted-for-teleportation. Player switches seats with target. Player teleports to Watchtower instead. (Rescue!)",
+      "SUPER ABILITY. Name. Description. (Phase!)"
+    ],
+    "strategy": "STRATEGY: Direction."
+  },
+  "riddler": {
+    "signal": "SIGNAL:",
+    "role": "TYPE - Villain",
+    "abilities": [
+      "PASSIVE ABILITY. Riddle Me This. Player must answer all questions directed to them with a question.",
+      "ACTIVE ABILITY. Who\u2019s Afraid of the Big Black Bat? Player may accuse one player of being Batman. (Accuse!)"
+    ],
+    "strategy": "STRATEGY: Expose Batman."
+  },
+  "tobias_whale": {
+    "signal": "SIGNAL:",
+    "role": "TYPE - Villain",
+    "abilities": [
+      "PASSIVE ABILITY. Name. Player must be targeted -ICE for elimination.",
+      "ACTIVE ABILITY. Name. Description. (Phase!)",
+      "SUPER ABILITY. Name. Description. (Phase!)"
+    ],
+    "strategy": "STRATEGY: Direction."
+  },
+  "lobo": {
+    "signal": "SIGNAL: use an insult",
+    "role": "TYPE - Villain",
+    "abilities": [
+      "PASSIVE ABILITY. The Main Man. If Lobo exposes any combination of three Civilians, Heroes, or Martians then Lobo wins the game.",
+      "ACTIVE ABILITY. Expert Tracker. Once per round Main Man can accuse one player of being a specific type.",
+      "SUPER ABILITY. Space Hog.  Player may move to any zone. (Rescue!)"
+    ],
+    "strategy": "STRATEGY: Expose a Hero, Martian, or Civilian."
+  },
+  "parasite": {
+    "signal": "SIGNAL:",
+    "role": "TYPE - Villain",
+    "abilities": [
+      "ACTIVE ABILITY. I Smell Power. Target any player. Player accuses target of being specific character. (Accuse!)",
+      "ACTIVE ABILITY. Absorption. Parasite targets an exposed or self-identified player. That player must give their card to Parasite. Parasite now has access to all abilities listed on that player\u2019s card. (Accuse!)"
+    ],
+    "strategy": "STRATEGY: Create chaos."
+  },
+  "miss_tessmacher": {
+    "signal": "SIGNAL:",
+    "role": "TYPE - Villain, Lackey",
+    "abilities": [
+      "PASSIVE ABILITY. Trusted Ally. Players knows identity of Luthor.",
+      "PASSIVE ABILITY. Collecting Intel. Player may lie during Telepathic Link/Telepathic Team.",
+      "ACTIVE ABILITY. Loyal Assistant. Initiate an Accuse phase. Target one player. Identify target using target\u2019s signal. (Discuss!)"
+    ],
+    "strategy": "STRATEGY: Expose a Hero."
+  },
+  "otis": {
+    "signal": "SIGNAL:",
+    "role": "TYPE - Villain",
+    "abilities": [
+      "PASSIVE ABILITY. Trusted Ally. Players knows identity of Luthor.",
+      "PASSIVE ABILITY. Collecting Intel. Player may lie during Telepathic Link/Telepathic Team.",
+      "ACTIVE ABILITY. Loyal Assistant. Initiate an Accuse phase. Target one player. Identify target using target\u2019s signal. (Discuss!)"
+    ],
+    "strategy": "STRATEGY: Expose a Hero."
+  },
+  "mercy": {
+    "signal": "SIGNAL:",
+    "role": "TYPE - Villain",
+    "abilities": [
+      "PASSIVE ABILITY. Collecting Intel. Player may lie during Telepathic Link/Telepathic Team.",
+      "PASSIVE ABILITY. Trusted Ally. Players knows identity of Luthor.",
+      "ACTIVE ABILITY. Bodyguard. If Luthor is targeted for Watchtower, player may take Luthor\u2019s place. (Rescue!)"
+    ],
+    "strategy": "STRATEGY: Protect Luthor."
+  },
+  "zod": {
+    "signal": "SIGNAL:",
+    "role": "TYPE - Villain",
+    "abilities": [
+      "PASSIVE ABILITY. Name. Player must be targeted -ICE for elimination.",
+      "ACTIVE ABILITY. Kneel Before Zod. During Vote phase, Zod targets one player. That player must Vote the same as Zod or be Eliminated!.",
+      "SUPER ABILITY. Name. Description. (Phase!)"
+    ],
+    "strategy": "STRATEGY: Expose Superman."
+  },
+  "cheetah": {
+    "signal": "SIGNAL:",
+    "role": "TYPE - Villain",
+    "abilities": [
+      "ACTIVE ABILITY. Got Your Scent. Target one player. Player may accuse target of being Steve Trevor. If player is correct, takes target hostage (Wonder Woman). (Accuse!)",
+      "ACTIVE ABILITY. Name. Description. (Phase!)",
+      "SUPER ABILITY. Name. Description. (Phase!)"
+    ],
+    "strategy": "STRATEGY: Expose Wonder Woman."
+  },
+  "joker": {
+    "signal": "SIGNAL:",
+    "role": "TYPE - Villain",
+    "abilities": [
+      "ACTIVE ABILITY. One Down. Target one player. Player takes target hostage (Batman). (10s).",
+      "ACTIVE ABILITY. Mad Love. Target one player. Player accuses target of being Dr. Harleen Quinzel. (Accuse!)",
+      "SUPER ABILITY. Name. Description. (Phase!)"
+    ],
+    "strategy": "STRATEGY: Expose Batman. Find Harley"
+  },
+  "sinestro": {
+    "signal": "SIGNAL:",
+    "role": "TYPE - Villain",
+    "abilities": [
+      "PASSIVE ABILITY. Name. Player must be targeted -ICE for elimination.",
+      "ACTIVE ABILITY. Name. Description. (Phase!)",
+      "SUPER ABILITY. Name. Description. (Phase!)"
+    ],
+    "strategy": "STRATEGY: Direction."
+  },
+  "black_adam": {
+    "signal": "SIGNAL:",
+    "role": "TYPE - Villain",
+    "abilities": [
+      "PASSIVE ABILITY. Name. Player must be targeted -ICE for elimination.",
+      "ACTIVE ABILITY. Name. Description. (Phase!)",
+      "SUPER ABILITY. Name. Description. (Phase!)"
+    ],
+    "strategy": "STRATEGY: Direction."
+  },
+  "zoom": {
+    "signal": "SIGNAL:",
+    "role": "TYPE - Villain",
+    "abilities": [
+      "PASSIVE ABILITY. Name. Player must be targeted -ICE for elimination.",
+      "ACTIVE ABILITY. Fastest Menace Alive. Target a player. Take player hostage (The Flash). (Accuse!)",
+      "SUPER ABILITY. Name. Description. (Phase!)"
+    ],
+    "strategy": "STRATEGY: Expose The Flash."
+  },
+  "faora": {
+    "signal": "SIGNAL:",
+    "role": "TYPE - Villain",
+    "abilities": [
+      "PASSIVE ABILITY. Name. Player must be targeted -ICE for elimination.",
+      "ACTIVE ABILITY. Brutal. Target one player. Take that player hostage (Superman).",
+      "SUPER ABILITY. Name. Description. (Phase!)"
+    ],
+    "strategy": "STRATEGY: Expose Superman."
+  },
+  "grodd": {
+    "signal": "SIGNAL:",
+    "role": "TYPE - Villain",
+    "abilities": [
+      "ACTIVE ABILITY. Hostile Takeover. Target one player. Player must vote the same as Grodd. (Vote!)",
+      "ACTIVE ABILITY. Name. Description. (Phase!)",
+      "SUPER ABILITY. Mind Scramble/Scrambled Heads. All players in same zone as Grodd must exchange cards twice. *Excludes Grodd"
+    ],
+    "strategy": "STRATEGY: Create chaos."
+  },
+  "roulette": {
+    "signal": "SIGNAL:",
+    "role": "TYPE - Villain",
+    "abilities": [
+      "PASSIVE ABILITY. Weigh the Odds. Roulette counts as three separate players. (Discuss!)",
+      "PASSIVE ABILITY. Play the Odds. Roulette counts as five separate players. (Vote!)",
+      "ACTIVE ABILITY. Make A Deal. Target one player. Roulette and that player must leave the room (30s). (Discuss!)"
+    ],
+    "strategy": "STRATEGY: : Create chaos."
+  },
+  "mr_mxyzptlk": {
+    "signal": "SIGNAL:",
+    "role": "TYPE - Villain",
+    "abilities": [
+      "PASSIVE ABILITY. 5th Dimensional Fan. Player knows identity of Superman.",
+      "ACTIVE ABILITY. Hiya Supes!. Player may Expose! Superman. (Accuse!)",
+      "SUPER ABILITY. Up, Up and Let\u2019s Play. When Superman is Exposed, player must restore all abilities to Superman and create a rule that specifically hinders Superman. (Report!)"
+    ],
+    "strategy": "STRATEGY: Create chaos. Challenge Superman."
+  },
+  "bat-mite": {
+    "signal": "SIGNAL:",
+    "role": "TYPE - Villain",
+    "abilities": [
+      "PASSIVE ABILITY. My Hero!. Bat-Mite knows identity of Batman.",
+      "ACTIVE ABILITY. Hi Batman!. Player may Expose! Batman. (Accuse!)",
+      "SUPER ABILITY. The Dark Mite Returns. When Batman is Exposed, Bat-Mite must restore all abilities to Batman and create a rule that specifically helps Batman. (Report!)"
+    ],
+    "strategy": "STRATEGY: Create chaos. Help Batman."
+  },
+  "dr_alchemy": {
+    "signal": "SIGNAL:",
+    "role": "TYPE - Villain",
+    "abilities": [
+      "PASSIVE ABILITY. Name. Player must be targeted -ICE for elimination.",
+      "ACTIVE ABILITY. Name. Description. (Phase!)",
+      "SUPER ABILITY. Name. Description. (Phase!)"
+    ],
+    "strategy": "STRATEGY: Direction."
+  },
+  "ares": {
+    "signal": "SIGNAL:",
+    "role": "TYPE - Villain",
+    "abilities": [
+      "PASSIVE ABILITY. Name. Player must be targeted -ICE for elimination.",
+      "ACTIVE ABILITY. Name. Description. (Phase!)",
+      "SUPER ABILITY. Name. Description. (Phase!)"
+    ],
+    "strategy": "STRATEGY: Direction."
+  },
+  "maxima": {
+    "signal": "SIGNAL:",
+    "role": "TYPE - Villain",
+    "abilities": [
+      "PASSIVE ABILITY. Name. Player must be targeted -ICE for elimination.",
+      "ACTIVE ABILITY. Interstellar Obsession. Knows identity of Superman.",
+      "SUPER ABILITY. Join Me... Expose Superman. Superman is auto-shielded each round if Superman votes same as player. (Vote!)"
+    ],
+    "strategy": "STRATEGY: Expose Superman."
+  },
+  "vandal_savage": {
+    "signal": "SIGNAL:",
+    "role": "TYPE - Villain",
+    "abilities": [
+      "PASSIVE ABILITY. Immortal. If eliminated, player becomes active at end of next round.",
+      "ACTIVE ABILITY. The Wheel of Fate. Knows identity of Kendra Saunders.",
+      "SUPER ABILITY. Join Me\u2026 Expose Kendra Saunders. Kendra Saunders is auto-shielded each round if target Votes same as player.(Vote!)"
+    ],
+    "strategy": "STRATEGY: Direction."
+  },
+  "ras_al-ghul": {
+    "signal": "SIGNAL:",
+    "role": "TYPE - Villain",
+    "abilities": [
+      "PASSIVE ABILITY. Lazarus Pit. If eliminated, player becomes active at end of next round.",
+      "ACTIVE ABILITY. Well done, Detective. Player knows identity of Batman.",
+      "SUPER ABILITY. Join Me\u2026 Expose Batman. Batman is auto-shielded this round if Batman votes same as player."
+    ],
+    "strategy": "STRATEGY: Direction."
+  },
+  "starro": {
+    "signal": "SIGNAL:",
+    "role": "TYPE - Villain",
+    "abilities": [
+      "PASSIVE ABILITY. No Voice of My Own. Player cannot Discuss or Accuse.",
+      "PASSIVE ABILITY. But It\u2019s Just A Starfish! If player conquers four players, player wins the game.",
+      "ACTIVE ABILITY. Interstellar Conqueror. Target one player. Signal target. Target cannot Discuss, Accuse, or Eliminate and must physically mimic player until player is removed."
+    ],
+    "strategy": "STRATEGY: Take over the prison."
+  },
+  "granny_goodness": {
+    "signal": "SIGNAL:",
+    "role": "TYPE - Villain",
+    "abilities": [
+      "PASSIVE ABILITY. Name. Player must be targeted -ICE for elimination.",
+      "ACTIVE ABILITY. Name. Description. (Phase!)",
+      "SUPER ABILITY. Name. Description. (Phase!)"
+    ],
+    "strategy": "STRATEGY: Direction."
+  },
+  "doomsday": {
+    "signal": "SIGNAL:",
+    "role": "TYPE - Villain",
+    "abilities": [
+      "PASSIVE ABILITY. Mute. Doomsday cannot Discuss, or Accuse.",
+      "PASSIVE ABILITY. Adaptive Survival. Doomsday, targeted once for elimination, and targeted once for teleportation in order to be removed from game.",
+      "ACTIVE ABILITY. Weapon of Mass Destruction. Doomsday targets any player. Target is eliminated regardless of passive ability."
+    ],
+    "strategy": "STRATEGY: Eliminate everyone."
+  },
+  "darkseid": {
+    "signal": "SIGNAL:",
+    "role": "TYPE - Villain",
+    "abilities": [
+      "PASSIVE ABILITY. Lord of Apokolips. Player must be targeted three times for elimination.",
+      "PASSIVE ABILITY. Boom Tube. Player must be targeted twice times for teleportation (Apokolips).",
+      "PASSIVE ABILITY. Kneel. If player is among final four players, player wins the game.",
+      "SUPER ABILITY. Omega Effect. Target one player. Target is Eliminated! regardless of passive ability. (Report!)",
+      "SUPER ABILITY. Anti-Life Equation. Darkseid targets one player. That player must vote the same as Darkseid or that player is Eliminated regardless of passive ability. (Vote!)",
+      "SUPER ABILITY. Omega Beams. Target a player targeted for teleportation. That player is teleported to Apokolips. (Rescue!)"
+    ],
+    "strategy": "STRATEGY: Win."
+  },
+  "brainiac": {
+    "signal": "SIGNAL:",
+    "role": "TYPE - Villain",
+    "abilities": [
+      "PASSIVE ABILITY. Merely A Facsimile. Player must be targeted three times for elimination.",
+      "PASSIVE ABILITY. Skull Ship. Player ignores zone conditions.",
+      "ACTIVE ABILITY. Catalogue the Universe. Pick a number 0-10. Pick a color R-V. Zone and occupants are eliminated regardless of passive ability. (Report!)",
+      "SUPER ABILITY. To Preserve Krypton. Target any zone which includes a Kryptonian player. All occupants within are eliminated unless Kryptonian player removes self from game."
+    ],
+    "strategy": "STRATEGY: Direction."
+  },
+  "poison_ivy": {
+    "signal": "SIGNAL:",
+    "role": "TYPE - Villain",
+    "abilities": [
+      "PASSIVE ABILITY. Grounded. Player must be targeted twice for teleportation.",
+      "ACTIVE ABILITY. Under My Sway. Target one player. Target must Vote! same as player or target is Exposed! (Vote!)",
+      "SUPER ABILITY. Seeds of Change. Target one player. Whichever zone that player occupies is now Type: Danger! (Report!)"
+    ],
+    "strategy": "STRATEGY: Direction."
+  },
+  "lois_lane": {
+    "signal": "SIGNAL: clap your hands once",
+    "role": "TYPE - Civilian",
+    "abilities": [
+      "PASSIVE ABILITY. Know You Anywhere. Player knows identity of Superman.",
+      "ACTIVE ABILITY. Intrepid Reporter. Target one player. Accuse target of being White Martian (Accuse!)"
+    ],
+    "strategy": "STRATEGY: Get into Watchtower."
+  },
+  "jimmy_olsen": {
+    "signal": "SIGNAL:",
+    "role": "TYPE - Civilian",
+    "abilities": [
+      "PASSIVE ABILITY. Know You Anywhere. Player knows identity of Superman.",
+      "PASSIVE ABILITY. Superman's Pal. If player is eliminated, Superman loses shield ability for rest of game."
+    ],
+    "strategy": "STRATEGY: Get into Watchtower."
+  },
+  "cat_grant": {
+    "signal": "SIGNAL: clap your hands",
+    "role": "TYPE - Civilian",
+    "abilities": [
+      "PASSIVE ABILITY. I\u2019m in Charge. Player knows the identity of all civilians.",
+      "ACTIVE ABILITY. Taking One for the Team. Player must answer 'Yes' to their FIRST accusation."
+    ],
+    "strategy": "STRATEGY: Get into Watchtower."
+  },
+  "perry_white": {
+    "signal": "SIGNAL: clap your hands",
+    "role": "TYPE:",
+    "abilities": [
+      "PASSIVE ABILITY. Name. Player must be targeted -ICE for elimination.",
+      "ACTIVE ABILITY. Name. Description. (Phase!)",
+      "PWHITEER ABILITY. Name. Description. (Phase!)"
+    ],
+    "strategy": "STRATEGY: Get into Watchtower."
+  },
+  "steve_trevor": {
+    "signal": "SIGNAL: clap your hands",
+    "role": "TYPE - Civilian",
+    "abilities": [
+      "PASSIVE ABILITY. Know You Anywhere. Player knows identity of Wonder Woman.",
+      "ACTIVE ABILITY. Dying Breath.  If Steve Trevor is eliminated, target one player. Player accuses target of being a White Martian. (Report!)"
+    ],
+    "strategy": "STRATEGY: Get into Watchtower."
+  },
+  "iris_west": {
+    "signal": "SIGNAL: clap your hands",
+    "role": "TYPE - Civilian",
+    "abilities": [
+      "PASSIVE ABILITY. Know You Anywhere. Player knows the identity of The Flash.",
+      "ACTIVE ABILITY. Intrepid Reporter. Target one player. Accuse target of being White Martian (Accuse!)"
+    ],
+    "strategy": "STRATEGY: Get into Watchtower."
+  },
+  "joe_west": {
+    "signal": "SIGNAL: clap your hands",
+    "role": "TYPE - Civilian",
+    "abilities": [
+      "PASSIVE ABILITY. Know You Anywhere. Investigator knows the identity of The Flash.",
+      "ACTIVE ABILITY. Citizen\u2019s Arrest. Target one player. Target cannot Discuss!, Vote!, or Accuse! for one round.(Inspect!)"
+    ],
+    "strategy": "STRATEGY: Get into Watchtower."
+  },
+  "a_pennyworth": {
+    "signal": "SIGNAL: clap your hands",
+    "role": "TYPE - Civilian",
+    "abilities": [
+      "PASSIVE ABILITY. Know You Anywhere. Player knows identity of Batman.",
+      "ACTIVE ABILITY. Name. Description. (Phase!)",
+      "APENNYWORTHER ABILITY. Name. Description. (Phase!)"
+    ],
+    "strategy": "STRATEGY: Get into Watchtower."
+  },
+  "leslie_thompkins": {
+    "signal": "SIGNAL: clap your hands",
+    "role": "TYPE - Civilian",
+    "abilities": [
+      "PASSIVE ABILITY. Know You Anywhere. Player knows identity of Batman.",
+      "ACTIVE ABILITY. A Good Doctor. Target one player. Player regains consciousness. (Report!)"
+    ],
+    "strategy": "STRATEGY: Get into Watchtower."
+  },
+  "james_gordon": {
+    "signal": "SIGNAL: clap your hands",
+    "role": "TYPE - Civilian",
+    "abilities": [
+      "PASSIVE ABILITY. Trust Your Gut. Player knows identity of all Villains.",
+      "ACTIVE ABILITY. Citizen\u2019s Arrest. Target one player. Target cannot Discuss!, Vote!, or Accuse! for one round. (Inspect!)"
+    ],
+    "strategy": "STRATEGY: Obstruct Villains."
+  },
+  "maggie_sawyer": {
+    "signal": "SIGNAL: clap your hands",
+    "role": "TYPE - Civilian",
+    "abilities": [
+      "PASSIVE ABILITY. Trust Your Gut. Player knows identity of all Villains.",
+      "ACTIVE ABILITY. Citizen\u2019s Arrest. Target one player. (Inspect!) Target cannot Discuss!, Vote!, or Accuse! for one round.",
+      "MSAWYERER ABILITY. Name. Description. (Phase!)"
+    ],
+    "strategy": "STRATEGY: Obstruct Villains."
+  },
+  "mary_batson": {
+    "signal": "SIGNAL: clap your hands",
+    "role": "TYPE - Civilian",
+    "abilities": [
+      "PASSIVE ABILITY. All In The Family. Players knows identity of Captain Marvel.",
+      "PASSIVE ABILITY. Family Ties. Player may lie for Captain Marvel. *Type: Civilian only",
+      "PASSIVE ABILITY. Earth\u2019s Mightiest Mortals. Player must be targeted thrice for elimination. **Type: Hero only.",
+      "ACTIVE ABILITY. Human Shield. Target one player. Player is shielded from elimination (Protect!) **Type: Hero only",
+      "SUPER ABILITY. Shazam! Shout \u201cShazam!\u201d Mary Marvel/Freddie Freeman is now Rescued. Player must self-identify as MARY MARVEL or CAPTAIN MARVEL JR. (Discuss!)  **TYPE: Hero only."
+    ],
+    "strategy": "STRATEGY: Get into Watchtower."
+  },
+  "freddie_freeman": {
+    "signal": "SIGNAL: clap your hands",
+    "role": "TYPE - Civilian",
+    "abilities": [
+      "PASSIVE ABILITY. All In The Family. Players knows identity of Captain Marvel.",
+      "PASSIVE ABILITY. Family Ties. Player may lie for Captain Marvel. *Type: Civilian only",
+      "PASSIVE ABILITY. Earth\u2019s Mightiest Mortals. Player must be targeted thrice for elimination. **Type: Hero only.",
+      "ACTIVE ABILITY. Human Shield. Target one player. Player is shielded from elimination (Protect!) **Type: Hero only",
+      "SUPER ABILITY. Shazam! Shout \u201cShazam!\u201d Mary Marvel/Freddie Freeman is now Rescued. Player must self-identify as MARY MARVEL or CAPTAIN MARVEL JR. (Discuss!)  TYPE: Hero."
+    ],
+    "strategy": "STRATEGY: Get into Watchtower."
+  },
+  "martin_stein": {
+    "signal": "SIGNAL: clap your hands",
+    "role": "TYPE - Civilian",
+    "abilities": [
+      "PASSIVE ABILITY. Jefferson? Player knows the identity of Jax.",
+      "PASSIVE ABILITY. Shared Pain. Player must be targeted twice for elimination.",
+      "ACTIVE ABILITY. \u201cFirestorm!\u201d  High-five Jax. (Discuss!) *Professor Martin Stein is now Rescued. **Player is now Type: Hero. ***Player must act in-unison.",
+      "SUPER ABILITY. Transmutation (I). Firestorm may change any rule in the game. All players must follow new rule until end of game. (Discuss!) **This ability only works in-unison.",
+      "SUPER ABILITY. The Heat is On (II). The three players to your right must self-identify. (Accuse!) **This ability only works in-unison.",
+      "SUPER ABILITY. Blast Off (III). Target one player. Firestorm and target may move to any zone. (Rescue!) **This ability only works in-unison."
+    ],
+    "strategy": "STRATEGY: Get into Watchtower/Get Civilians to Watchtower."
+  },
+  "jefferson_jackson": {
+    "signal": "SIGNAL: clap your hands",
+    "role": "TYPE - Civilian",
+    "abilities": [
+      "PASSIVE ABILITY. Jefferson? Player knows the identity of Jax.",
+      "PASSIVE ABILITY. Shared Pain. Player must be targeted twice for elimination.",
+      "ACTIVE ABILITY. \u201cFirestorm!\u201d  High-five Jax. (Discuss!) *Professor Martin Stein is now Rescued. **Player is now Type: Hero. ***Player must act in-unison.",
+      "SUPER ABILITY. Transmutation (I). Firestorm may change any rule in the game. All players must follow new rule until end of game. (Discuss!) **This ability only works in-unison.",
+      "SUPER ABILITY. The Heat is On (II). The three players to your right must self-identify. (Accuse!) **This ability only works in-unison.",
+      "SUPER ABILITY. Blast Off (III). Target one player. Firestorm and target may move to any zone. (Rescue!) **This ability only works in-unison."
+    ],
+    "strategy": ""
+  },
+  "martha_kent": {
+    "signal": "SIGNAL: clap your hands",
+    "role": "TYPE - Civilian",
+    "abilities": [
+      "PASSIVE ABILITY. Know You Anywhere. Player knows the identity of Superman.",
+      "PASSIVE ABILITY. Powerless. If player is Eliminated!, Superman is Eliminated.",
+      "SUPER ABILITY. Pep Talk. During Discussion phase, player self-identifies. Superman may shield three additional players this round."
+    ],
+    "strategy": "STRATEGY: Get into Watchtower."
+  },
+  "jonathan_kent": {
+    "signal": "SIGNAL: clap your hands",
+    "role": "TYPE - Civilian",
+    "abilities": [
+      "PASSIVE ABILITY. Know You Anywhere. Player knows the identity of Superman.",
+      "PASSIVE ABILITY. Powerless. If player is Eliminated!, Superman is Eliminated.",
+      "SUPER ABILITY. Pep Talk. During Discussion phase, player self-identifies. Superman may shield three additional players this round."
+    ],
+    "strategy": "STRATEGY: Get into Watchtower."
+  },
+  "pete_ross": {
+    "signal": "SIGNAL: clap your hands",
+    "role": "TYPE - Civilian",
+    "abilities": [
+      "PASSIVE ABILITY. Clark? Player knows identity of Superman.",
+      "PASSIVE ABILITY. Turn the Earth. If player is eliminated, player may Expose! Superman. Superman loses no abilities, and may cancel results of previous Eliminate phase then initiate new Eliminate! >>> Protect! phase."
+    ],
+    "strategy": "STRATEGY: Get into Watchtower."
+  },
+  "lana_lang": {
+    "signal": "SIGNAL: clap your hands",
+    "role": "TYPE - Civilian",
+    "abilities": [
+      "PASSIVE ABILITY. Clark? Player knows identity of Superman.",
+      "PASSIVE ABILITY. Turn the Earth. If player is eliminated, player may Expose! Superman. Superman loses no abilities, and may cancel results of previous Eliminate phase then initiate new Eliminate! >>> Protect! phase."
+    ],
+    "strategy": "STRATEGY: Get into Watchtower."
+  },
+  "kendra_saunders": {
+    "signal": "SIGNAL: clap your hands",
+    "role": "TYPE - Civilian",
+    "abilities": [
+      "PASSIVE ABILITY. Timeless Love. If Hawkman wakes you during Inspect phase, you are now HAWKWOMAN, Type: Hero.",
+      "PASSIVE ABILITY. Cycle of Life. If Eliminated, player returns to game after one round (Type: Hero only).",
+      "ACTIVE ABILITY. Nth Metal Mace. At start of Accuse! phase, target one player. Target cannot Accuse! this phase. (Type Hero only)",
+      "ACTIVE ABILITY. Nth Metal Harness. Can move self plus one target to any zone. (Type: Hero only)"
+    ],
+    "strategy": "STRATEGY: Get into Watchtower."
+  },
+  "dr_harleen_quinzel": {
+    "signal": "SIGNAL: clap your hands",
+    "role": "TYPE - Civilian",
+    "abilities": [
+      "PASSIVE ABILITY. Psych Eval. Player knows identity of Villains.",
+      "PASSIVE ABILITY. Mad Love. If Joker wakes you during Accuse! phase, Harleen Quinzel is eliminated. Player is now HARLEY QUINN, Type: Villain.",
+      "ACTIVE ABILITY. A Good Doctor. Target one player. Player regains consciousness. (Report!) (Type: Civilian only)",
+      "ACTIVE ABILITY. WHAM!. Target any player. Player may not Protect. (Accuse!) (Type: Villain only)"
+    ],
+    "strategy": "STRATEGY: Get into Watchtower."
+  },
+  "dr_caitlin_snow": {
+    "signal": "SIGNAL: clap your hands",
+    "role": "TYPE - Civilian",
+    "abilities": [
+      "PASSIVE ABILITY. Barry! Player knows identity of The Flash.",
+      "PASSIVE ABILITY. Cold-hearted. If player is eliminated, player must self-identify as KILLER FROST. *Type: Villain",
+      "ACTIVE ABILITY. A Good Doctor. Target one player. Player regains consciousness. (Report!) (Type: Civilian)",
+      "SUPER ABILITY. What\u2019s My Name?. Target one player. Target is eliminated. (Eliminate!) (Type: Villain only)"
+    ],
+    "strategy": "STRATEGY: Get into Watchtower."
+  },
+  "harvey_dent": {
+    "signal": "SIGNAL: clap your hands",
+    "role": "TYPE - Civilian",
+    "abilities": [
+      "PASSIVE ABILITY. Gotham\u2019s Golden Boy. Players knows identity of all Heroes and Civilians.",
+      "PASSIVE ABILITY. Become the Villain. If player is eliminated, player is now TWO-FACE. Player must self-identify as Two-Face. *Player is now Type: Villain.",
+      "ACTIVE ABILITY. Let Fate Decide. Target two players. Player takes targets hostage (*Any). (10s). (Accuse!) (Type: Villain only)"
+    ],
+    "strategy": "STRATEGY: Get into Watchtower."
+  },
+  "harrison_wells": {
+    "signal": "SIGNAL: clap your hands",
+    "role": "TYPE - Civilian",
+    "abilities": [
+      "PASSIVE ABILITY. Name. Player must be targeted -ICE for elimination.",
+      "ACTIVE ABILITY. Name. Description. (Phase!)",
+      "hwellsER ABILITY. Name. Description. (Phase!)"
+    ],
+    "strategy": "STRATEGY: Get into Watchtower."
+  },
+  "felicity_smoak": {
+    "signal": "SIGNAL: clap your hands",
+    "role": "TYPE - Civilian",
+    "abilities": [
+      "PASSIVE ABILITY. Name. Player must be targeted -ICE for elimination.",
+      "ACTIVE ABILITY. Name. Description. (Phase!)",
+      "fsmoakER ABILITY. Name. Description. (Phase!)"
+    ],
+    "strategy": "STRATEGY: Get into Watchtower."
+  },
+  "krypto": {
+    "signal": "SIGNAL - bark",
+    "role": "TYPE - Hero, Protector",
+    "abilities": [
+      "PASSIVE ABILITY. Team Mascot. Player knows the identity of all Heroes.",
+      "PASSIVE ABILITY. What is It, Boy?. Player may only communicate using their signal.",
+      "PASSIVE ABILITY. Loyal Companion. Player cannot be Exposed! Player is only eliminated when all from HOUSE OF EL are eliminated.",
+      "ACTIVE ABILITY. Dog of Steel. Player may shield one player. (Protect!)"
+    ],
+    "strategy": "STRATEGY: Help Heroes work together."
+  },
+  "streaky": {
+    "signal": "SIGNAL - meow",
+    "role": "TYPE - Hero, Protector",
+    "abilities": [
+      "wrap = 500, IVE ABILITY. Team Mascot. Player knows the identity of all Heroes.",
+      "PASSIVE ABILITY. What is It, Boy?. Player may only communicate using their signal.",
+      "PASSIVE ABILITY. Loyal Companion. Player cannot be Exposed! Player is only eliminated when all from HOUSE OF EL are eliminated.",
+      "ACTIVE ABILITY. Cat of Steel. Player may shield one player. (Protect!)"
+    ],
+    "strategy": "STRATEGY: Help Heroes work together."
+  },
+  "robin": {
+    "signal": "SIGNAL - flap your hands",
+    "role": "TYPE - Hero, Sidekick",
+    "abilities": [
+      "PASSIVE ABILITY. Hello Bruce. Player knows the identity of Batman.",
+      "PASSIVE ABILITY. Trained by Batman. Player may lie for Batman. (Accuse!)",
+      "ACTIVE ABILITY. Forget the Rules. During Inspect! phase, target one player. That player loses all abilities for one round."
+    ],
+    "strategy": "STRATEGY: Protect Batman."
+  },
+  "batgirl": {
+    "signal": "SIGNAL - make horns",
+    "role": "TYPE - Hero, Sidekick",
+    "abilities": [
+      "PASSIVE ABILITY. Hello Bruce. Player knows the identity of Batman.",
+      "PASSIVE ABILITY. Trained by Batman. Player may lie for Batman. (Accuse!)",
+      "ACTIVE ABILITY. Forget the Rules. During Inspect! phase, target one player. That player loses all abilities for one round."
+    ],
+    "strategy": "STRATEGY: Protect Batman."
+  },
+  "kid_flash": {
+    "signal": "SIGNAL - Z or zig-zag",
+    "role": "TYPE - Hero, Sidekick",
+    "abilities": [
+      "wrap = 500, IVE ABILITY. Tied to the Speed Force. Player knows the identity of The Flash.",
+      "PASSIVE ABILITY. Team Flash. Player may lie for The Flash. (Accuse!).",
+      "SUPER ABILITY. Speedy Escape. Target one player. Player and target are now Rescued! (Speed Force). (Rescue!)"
+    ],
+    "strategy": "STRATEGY: Protect The Flash."
+  },
+  "jesse_quick": {
+    "signal": "SIGNAL - Z or zig-zag",
+    "role": "TYPE - Hero, Sidekick",
+    "abilities": [
+      "PASSIVE ABILITY. Tied to the Speed Force. Player knows the identity of The Flash.",
+      "PASSIVE ABILITY. Team Flash. Player may lie for The Flash. (Accuse!).",
+      "SUPER ABILITY. Earth-2 Escape. Target one player. Player and target are now Rescued! (Earth-2). (Rescue!)"
+    ],
+    "strategy": "STRATEGY: Protect The Flash."
+  },
+  "supergirl": {
+    "signal": "SIGNAL - 'S' on chest",
+    "role": "TYPE - Hero, Sidekick, Protector",
+    "abilities": [
+      "PASSIVE ABILITY. The Family Business. Player may shield one player.",
+      "PASSIVE ABILITY. Under A Yellow Sun. Player must be targeted thrice for elimination.",
+      "ACTIVE ABILITY. Look, Up in the Sky... Player may lie for Superman. (Accuse!)",
+      "SUPER ABILITY. Up Up and Away! Target one player. Player and target are rescued (Fortress of Solitude). (Rescue!)"
+    ],
+    "strategy": "STRATEGY: Protect Superman."
+  },
+  "superboy": {
+    "signal": "SIGNAL - 'S' on chest",
+    "role": "TYPE - Hero, Sidekick, Protector",
+    "abilities": [
+      "PASSIVE ABILITY. The Family Business. Player may shield one player.",
+      "PASSIVE ABILITY. Under A Yellow Sun. Player must be targeted thrice for elimination.",
+      "ACTIVE ABILITY. Look, Up in the Sky... Player may lie for Superman. (Accuse!)",
+      "SUPER ABILITY. Up Up and Away! Target one player. Player and target are rescued (Fortress of Solitude). (Rescue!)"
+    ],
+    "strategy": "STRATEGY: Protect Superman."
+  },
+  "wonder_girl": {
+    "signal": "SIGNAL - Hero, Sidekick, Protector",
+    "role": "TYPE - three fingers in 'W'",
+    "abilities": [
+      "PASSIVE ABILITY. What Are Kid Sisters For. Player may lie for Wonder Woman. (Accuse!)",
+      "PASSIVE ABILITY. Keys to Invisible Plane. Target one player. Player and target are Rescued (Themyscira). (Rescue!)",
+      "ACTIVE ABILITY. Bulletproof Bracelets. Player may shield self or one other player. (Protect!)",
+      "SUPER ABILITY. Lasso of Truth. Target one player. Target must a) answer one direct question from player or b) self-identify. (Accuse!)"
+    ],
+    "strategy": "STRATEGY: Protect Wonder Woman."
+  },
+  "miss_martian": {
+    "signal": "SIGNAL - arms crossed",
+    "role": "TYPE - Hero, Sidekick, Martian (White)",
+    "abilities": [
+      "PASSIVE ABILITY. True Form. During Secret Identity phase and Eliminate phase, player is considered White Martian.",
+      "PASSIVE ABILITY. Telepathy. Miss Martian can lie to anyone but White Martians during Accuse! phase.",
+      "ACTIVE ABILITY. Telepathic Shield. During Eliminate phase, target one player. That player is shielded from elimination.",
+      "ACTIVE ABILITY. Telepathic Link. During Inspect! phase, Martian Manhunter may self-identify to one player. That player must then signal their role to Martian Manhunter (10s).",
+      "SUPER ABILITY. Telepathic Team.  During Inspect! phase, Martian Manhunter may signal Watchtower to reveal Telepathically Linked characters to each other."
+    ],
+    "strategy": "STRATEGY: Negate White Martians."
+  },
+  "bumblebee": {
+    "signal": "SIGNAL -",
+    "role": "TYPE -",
+    "abilities": [
+      "PASSIVE ABILITY. Shrink! Player cannot be exposed.",
+      "ACTIVE ABILITY. Zip! During Rescue phase, target one player. Player hides behind target. Player cannot be eliminated or teleported unless target is eliminated or teleported.",
+      "ACTIVE ABILITY. Zap! Player may accuse one player of being Martian.",
+      "SUPER ABILITY. Bzz! Player can check Secret Identity roster. (10s)"
+    ],
+    "strategy": "STRATEGY: Reveal White Martians to Heroes."
+  },
+  "beast_boy": {
+    "signal": "SIGNAL -",
+    "role": "TYPE - Hero, Sidekick",
+    "abilities": [
+      "PASSIVE ABILITY. Green Skin. Player cannot be Exposed.",
+      "ACTIVE ABILITY. \u201cMosquito!\u201d Player cannot be targeted this round. (Discuss!)",
+      "ACTIVE ABILITY. \u201cRhino!\u201d Player is shielded this round. (Protect!)",
+      "ACTIVE ABILITY. \u201cGiraffe!\u201d Player looks at another player\u2019s card. (Accuse!)",
+      "ACTIVE ABILITY. \u201cT-Rex!\u201d Target a player. Target cannot use any abilities for one round. (Accuse!)"
+    ],
+    "strategy": "STRATEGY: Stop Villains."
+  },
+  "thunder": {
+    "signal": "",
+    "role": "",
+    "abilities": [
+      "PASSIVE ABILITY. Name. Player must be targeted -ICE for elimination.",
+      "ACTIVE ABILITY. Name. Description. (Phase!)",
+      "THNDRER ABILITY. Name. Description. (Phase!)"
+    ],
+    "strategy": "STRATEGY: Direction."
+  }
+}

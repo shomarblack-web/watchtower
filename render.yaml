@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: white-martian-watchtower
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn -w 1 --threads 100 app:app

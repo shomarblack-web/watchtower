@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Watchtower</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="player-page">
+
+<div class="topbar">
+  <div class="brand">WHITE MARTIAN <span>&reg;</span><small>WATCHTOWER</small></div>
+  <div class="player-toolbar" id="player-toolbar" style="display:none">
+    <button class="btn-ghost" style="width:auto;margin:0;padding:8px 12px" onclick="openMyCard()">My Card</button>
+    <button class="btn-ghost" style="width:auto;margin:0;padding:8px 12px" onclick="openRules()">Rules &amp; Phases</button>
+  </div>
+</div>
+
+<div id="phase-reminder-toast" class="phase-toast" style="display:none">
+  <div class="phase-toast-head">
+    <span id="phase-toast-title">Reminder</span>
+    <button class="phase-toast-close" onclick="dismissReminder()">&times;</button>
+  </div>
+  <div id="phase-toast-body"></div>
+</div>
+
+<div class="player-wrap">
+
+  <div id="name-gate" class="panel" style="margin-top:16px">
+    <h3>Who are you?</h3>
+    <input id="player-name" class="name-input" placeholder="Type your name…">
+    <button class="btn-primary" onclick="setName()">Join the Watchtower</button>
+  </div>
+
+  <div id="game-view" style="display:none">
+    <div id="whoami-banner" class="whoami-banner" style="display:none"></div>
+
+    <div class="big-phase">
+      <div class="r mono" id="round-label">ROUND —</div>
+      <div class="p" id="phase-label">Waiting…</div>
+    </div>
+
+    <div class="panel" id="vote-panel" style="display:none">
+      <h3>Cast your vote</h3>
+      <div class="vote-list" id="vote-list"></div>
+      <div id="vote-confirm"></div>
+    </div>
+
+    <div class="panel">
+      <h3>Active on the board</h3>
+      <div id="active-list"></div>
+    </div>
+  </div>
+</div>
+
+<div id="shuffle-overlay" class="map-overlay" style="display:none">
+  <div class="reveal-modal kirby-frame">
+    <div class="kirby-inner">
+      <div class="reveal-label">You are</div>
+      <div class="reveal-name" id="reveal-name">—</div>
+      <div class="reveal-buttons">
+        <button class="btn-primary" onclick="closeReveal(); openMyCard();">View My Card</button>
+        <button class="btn-ghost" onclick="closeReveal()">Got it</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="mycard-overlay" class="map-overlay" style="display:none" onclick="if(event.target===this) closeMyCard()">
+  <div class="card-modal kirby-frame">
+    <div class="kirby-inner">
+      <div class="map-modal-head">
+        <h3 style="margin:0" id="mycard-name">—</h3>
+        <button class="btn-ghost" style="width:auto;padding:6px 12px" onclick="closeMyCard()">Close</button>
+      </div>
+      <div id="mycard-body"></div>
+    </div>
+  </div>
+</div>
+
+<div id="rules-overlay" class="map-overlay" style="display:none" onclick="if(event.target===this) closeRules()">
+  <div class="card-modal kirby-frame">
+    <div class="kirby-inner">
+      <div class="map-modal-head">
+        <h3 style="margin:0">Rules &amp; Phases</h3>
+        <button class="btn-ghost" style="width:auto;padding:6px 12px" onclick="closeRules()">Close</button>
+      </div>
+      <div id="rules-body"></div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script>
+  const CHARACTERS = {{ characters | tojson }};
+  const TEAM_LABELS = {{ team_labels | tojson }};
+  const TEAM_COLORS = {{ team_colors | tojson }};
+  const PHASES = {{ phases | tojson }};
+  const PHASE_INFO = {{ phase_info | tojson }};
+</script>
+<script src="/static/player.js"></script>
+</body>
+</html>
