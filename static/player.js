@@ -178,6 +178,20 @@ function dismissReminder() {
   document.getElementById("phase-reminder-toast").style.display = "none";
 }
 
+socket.on("phase_guide", (data) => {
+  const toast = document.getElementById("phase-guide-toast");
+  if (!data.text) {
+    toast.style.display = "none";
+    return;
+  }
+  document.getElementById("phase-guide-title").textContent = `${data.phase}! — How to Play`;
+  document.getElementById("phase-guide-body").textContent = data.text;
+  toast.style.display = "block";
+});
+function dismissGuide() {
+  document.getElementById("phase-guide-toast").style.display = "none";
+}
+
 const VOTE_PHASES = ["Vote"];
 let myVoteLocked = false;
 let pendingVote = null;

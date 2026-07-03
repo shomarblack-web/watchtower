@@ -426,6 +426,18 @@ NARRATION_PROMPTS = [
         "title": "Black Lightning shocks a White Martian",
         "text": "In the BLINK OF AN EYE [player] feels a shock, reverts to their Martian form, then quickly back to human.",
     },
+    {
+        "title": "Start the Rescue Mission (Eyes Open)",
+        "text": "This is Watchtower... Come in Justice League!",
+    },
+    {
+        "title": "Transition into the night phases (Eyes Closed)",
+        "text": "This is Watchtower... Teleporter engaged! Mind the flash.",
+    },
+    {
+        "title": "After Inspect! phase resolves",
+        "text": "There's a burst of light and then\u2026",
+    },
 ]
 
 # ------------------------------------------------------------------------

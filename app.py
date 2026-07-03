@@ -284,10 +284,53 @@ def _active_names_by_team(team):
     ]
 
 
+HOST_CHECKLISTS = {
+    "Report": [
+        "Read the line above aloud.",
+        "This is a recap only - no player actions this phase besides listening.",
+    ],
+    "Discuss": [
+        "Read the line above aloud.",
+        "Start the 2-minute timer below.",
+        "Watch for a nomination seconded by a different, non-targeted player - that's what ends this phase.",
+        "Remember: a player may NOT nominate themselves.",
+    ],
+    "Vote": [
+        "Ask line 1 aloud and collect a show of hands (thumbs up / thumbs down) - the targeted player votes too.",
+        "Majority decides. If they win the vote, announce line 2.",
+        "If they lose the vote, start a new Discuss! phase instead of continuing to Accuse.",
+    ],
+    "Accuse": [
+        "Read the line above aloud.",
+        "Let any character spotlighted gold (Accuser-type) make their accusation.",
+    ],
+    "Rescue": [
+        "Read both lines above aloud, in order.",
+        "Reveal the identity of the rescued civilian.",
+        "Confirm everyone's eyes are closed before moving on to Eliminate!.",
+    ],
+    "Eliminate": [
+        "Call on the White Martians (and anyone else spotlighted gold) to open their eyes.",
+        "Give them about a minute to silently agree on a target.",
+        "Have everyone close their eyes again before moving on.",
+    ],
+    "Protect": [
+        "Call each character spotlighted gold (Protector-type) one at a time using the line above.",
+        "Only one player should have their eyes open at a time.",
+        "Apply their shield once they've chosen a target.",
+    ],
+    "Inspect": [
+        "Call each character spotlighted gold (Inspector-type) one at a time using the line above.",
+        "Only one player should have their eyes open at a time.",
+    ],
+}
+
+
 def render_phase_script():
     """Build the exact line(s) the moderator should read aloud for whatever
-    phase is currently active, filled in from live game state. Returns None
-    when no phase is selected, or for phases with no script defined.
+    phase is currently active, filled in from live game state, plus a
+    host-facing action checklist for that phase. Returns None when no
+    phase is selected.
     """
     idx = GAME["phase_index"]
     if idx is None:
@@ -311,7 +354,7 @@ def render_phase_script():
                 f"You're surprised to find {villains} in the prison as well. "
                 f"Scanners indicate at least {martian_count} {martian_label} among you."
             )
-            return {"phase": "Report", "kind": "briefing", "lines": [text]}
+            result = {"phase": "Report", "kind": "briefing", "lines": [text]}
         else:
             rescued = [display_name_for(c) for c in history["rescued"] if c in CHARACTERS_BY_ID]
             eliminated = [display_name_for(c) for c in history["eliminated"] if c in CHARACTERS_BY_ID]
@@ -324,14 +367,14 @@ def render_phase_script():
                 if eliminated else "Everyone else made it through the night safely."
             )
             text = f"Welcome back. {rescued_clause} {eliminated_clause}"
-            return {"phase": "Report", "kind": "recap", "lines": [text]}
+            result = {"phase": "Report", "kind": "recap", "lines": [text]}
 
-    if phase == "Discuss":
-        return {"phase": "Discuss", "kind": "static", "lines": [
+    elif phase == "Discuss":
+        result = {"phase": "Discuss", "kind": "static", "lines": [
             "Booting up the teleporter. You've got two minutes to discuss who you want to send to Watchtower."
         ]}
 
-    if phase == "Vote":
+    elif phase == "Vote":
         nominees = _join_names(vote_candidates())
         lines = [f"1. Raise your hand if you want {nominees} to reach Watchtower?"]
         tally = vote_tally()
@@ -339,21 +382,41 @@ def render_phase_script():
             lines.append(f"2. Calibrating teleporter. Keep still {tally[0][0]}.")
         else:
             lines.append("2. Calibrating teleporter\u2026 (waiting for votes)")
-        return {"phase": "Vote", "kind": "live", "lines": lines}
+        result = {"phase": "Vote", "kind": "live", "lines": lines}
 
-    if phase == "Accuse":
-        return {"phase": "Accuse", "kind": "static", "lines": [
+    elif phase == "Accuse":
+        result = {"phase": "Accuse", "kind": "static", "lines": [
             "...Any accusations of identity I need to log?"
         ]}
 
-    if phase == "Rescue":
+    elif phase == "Rescue":
         winner_name = GAME["last_vote_winner"] or "the winner"
-        return {"phase": "Rescue", "kind": "static", "lines": [
+        result = {"phase": "Rescue", "kind": "static", "lines": [
             f"I'm beaming up {winner_name}",
             "MIND THE FLASH OF THE TELEPORTER BEAM. EVERYONE, EYES CLOSED!",
         ]}
 
-    return None
+    elif phase == "Eliminate":
+        result = {"phase": "Eliminate", "kind": "static", "lines": []}
+
+    elif phase == "Protect":
+        result = {"phase": "Protect", "kind": "static", "lines": [
+            "[Hero], open your eyes. Choose one other player to shield... "
+            "All right, close your eyes."
+        ]}
+
+    elif phase == "Inspect":
+        result = {"phase": "Inspect", "kind": "static", "lines": [
+            "[Hero], open your eyes. Choose one other player to inspect... "
+            "All right, close your eyes."
+        ]}
+
+    else:
+        return None
+
+    result["checklist"] = HOST_CHECKLISTS.get(phase, [])
+    return result
+
 
 
 def public_state(reveal_names):
@@ -483,24 +546,106 @@ def push_condition_recap():
             }, room=sid)
 
 
+def _end_game(winner, title, message):
+    GAME["game_over"] = {"winner": winner, "title": title, "message": message}
+    log_activity(f"GAME OVER \u2014 {title}: {message}")
+    socketio.emit("game_over", GAME["game_over"], room="hosts")
+    socketio.emit("game_over", GAME["game_over"], room="players")
+
+
 def check_win_condition():
-    """Heroes win the moment every currently-active Hero has been Rescued
-    (reached Watchtower). Only fires once per game."""
+    """Check every FAIL/SUCCEED condition after each relevant action.
+    Only fires once per game (first condition met wins)."""
     if GAME["game_over"]:
         return
-    heroes = [
-        cid for cid, st in GAME["characters"].items()
-        if st["active"] and CHARACTERS_BY_ID.get(cid, {}).get("team") == "hero"
-    ]
-    if heroes and all(GAME["characters"][cid]["rescued"] for cid in heroes):
-        GAME["game_over"] = {
-            "winner": "Heroes",
-            "title": "HEROES WIN!",
-            "message": "All Heroes have safely reached Watchtower.",
-        }
-        log_activity("GAME OVER \u2014 Heroes win! All Heroes reached Watchtower.")
-        socketio.emit("game_over", GAME["game_over"], room="hosts")
-        socketio.emit("game_over", GAME["game_over"], room="players")
+    chars = GAME["characters"]
+
+    def active_team(team):
+        return [
+            cid for cid, st in chars.items()
+            if st["active"] and CHARACTERS_BY_ID.get(cid, {}).get("team") == team
+        ]
+
+    martians = active_team("martian")
+    heroes = active_team("hero")
+    civilians = active_team("civilian")
+
+    all_civilians_rescued = bool(civilians) and all(chars[c]["rescued"] for c in civilians)
+    all_heroes_rescued = bool(heroes) and all(chars[c]["rescued"] for c in heroes)
+
+    # --- White Martians win ---
+    if martians and all(chars[c]["rescued"] for c in martians):
+        _end_game("Martians", "WHITE MARTIANS WIN!",
+                  "All White Martians were teleported to Watchtower.")
+        return
+    if chars.get("martian_manhunter", {}).get("exposed"):
+        _end_game("Martians", "WHITE MARTIANS WIN!", "Martian Manhunter was Exposed!")
+        return
+    if heroes and all(chars[c]["eliminated"] for c in heroes) and not all_civilians_rescued:
+        _end_game("Martians", "WHITE MARTIANS WIN!",
+                  "All Heroes were eliminated before all Civilians were rescued.")
+        return
+    if civilians and all(chars[c]["eliminated"] for c in civilians):
+        _end_game("Martians", "WHITE MARTIANS WIN!", "All Civilians were eliminated.")
+        return
+    if all_heroes_rescued and not all_civilians_rescued:
+        _end_game("Martians", "WHITE MARTIANS WIN!",
+                  "All Heroes reached Watchtower before all Civilians were rescued.")
+        return
+
+    # --- Heroes win ---
+    if martians and all(chars[c]["exposed"] for c in martians):
+        _end_game("Heroes", "HEROES WIN!", "All White Martians were Exposed!")
+        return
+    if all_civilians_rescued:
+        _end_game("Heroes", "HEROES WIN!", "All Civilians have been safely rescued!")
+        return
+
+
+# ------------------------------------------------------------------------
+# "How to Play" tutorial guidance, sent to players at the start of each
+# phase - only through Round 3, so new players get walked through the
+# flow early on without it cluttering later rounds. Whole-table phases
+# (Report/Discuss/Vote/Rescue) get the same message for everyone. Role
+# phases (Accuse/Eliminate/Protect/Inspect) only get a guide here for
+# players whose character has NO ability tagged for that phase ("keep
+# your eyes closed and wait") - anyone who DOES have one already gets the
+# specific ability text via push_phase_reminders, so they're not told the
+# same thing twice.
+# ------------------------------------------------------------------------
+PHASE_GUIDE_EVERYONE = {
+    "Report": "Watchtower is about to recap what happened last round. Just listen!",
+    "Discuss": "Talk it out! Openly discuss who should be sent to Watchtower "
+               "(about 2 minutes). This phase ends once a player is "
+               "nominated and a different, non-targeted player seconds that "
+               "nomination. You may not nominate yourself.",
+    "Vote": "Everyone votes thumbs up or thumbs down on the targeted player "
+            "- the targeted player votes too. Majority decides. If they win "
+            "the vote, they're Targeted-for-Teleportation and immune to "
+            "accusations. If they lose, we go back to Discuss.",
+    "Rescue": "Watchtower is about to reveal who's been safely rescued.",
+}
+PHASE_GUIDE_BYSTANDER = {
+    "Accuse": "This phase is for Accuser-type characters. Sit tight.",
+    "Eliminate": "Keep your eyes closed and wait for Watchtower to act.",
+    "Protect": "Keep your eyes closed unless Watchtower calls on you.",
+    "Inspect": "Keep your eyes closed unless Watchtower calls on you.",
+}
+
+
+def push_phase_guide():
+    phase = PHASES[GAME["phase_index"]] if GAME["phase_index"] is not None else None
+    for sid, name in PLAYER_SIDS.items():
+        text = None
+        if phase and GAME["round"] <= 3:
+            if phase in PHASE_GUIDE_EVERYONE:
+                text = PHASE_GUIDE_EVERYONE[phase]
+            elif phase in PHASE_GUIDE_BYSTANDER:
+                cid = find_player_character_id(name)
+                is_actor = cid and phase in ABILITY_PHASE_MAP.get(cid, {})
+                if not is_actor:
+                    text = PHASE_GUIDE_BYSTANDER[phase]
+        socketio.emit("phase_guide", {"phase": phase, "text": text}, room=sid)
 
 
 def push_phase_reminders():
@@ -665,6 +810,7 @@ def on_set_phase(data):
             GAME["votes"] = {}
     broadcast()
     push_phase_reminders()
+    push_phase_guide()
 
 
 @socketio.on("clear_all_characters")

@@ -1,5 +1,21 @@
 # White Martian — Watchtower (Web Edition)
 
+## New: Host phase checklists
+
+Added to the existing phase-script popup (which already auto-opens and
+shows the narration line + gold spotlight glow): a **Host Checklist**
+section with clickable checkboxes for each phase, sharing the same
+underlying rules content as the player tutorial guides — just phrased as
+action items for you instead of "what to expect" for players. Checking
+items off doesn't reset when the popup's live content updates (e.g. Vote's
+tally refreshing as votes come in) — verified this holds even mid-vote.
+
+This also filled a real gap: **Eliminate!, Protect!, and Inspect! never
+had a phase-script popup at all before** — clicking those phase LEDs did
+nothing beyond the spotlight glow. They now get the "[Hero], open your
+eyes..." line (for Protect/Inspect) and a full checklist (all three),
+matching the other five phases.
+
 A live, multi-device rebuild of your Tkinter game tracker. One host device runs
 the console; players follow along and vote from their phones on the same WiFi.
 
@@ -131,6 +147,76 @@ This version stores the roster as **data**, not code:
   button. Clicking any cell blacks out *every* cell sharing that location
   name at once, matching the original's behavior (several coordinates
   intentionally point to the same location).
+
+## New: Win/Loss conditions — finalized
+
+Replaced the earlier draft with your exact rules, tested individually
+against a live import including the edge case (both conditions becoming
+true at once correctly resolves as a Heroes win, not a loss):
+
+**"White Martians Win!"**:
+1. All active White Martians have been Rescued (reached Watchtower)
+2. Martian Manhunter is Exposed
+3. All active Heroes are Eliminated *before* all Civilians are Rescued
+4. All active Civilians are Eliminated
+5. All active Heroes reach Watchtower *before* all Civilians are Rescued
+   (abandoning the mission early)
+
+**"Heroes Win!"**:
+1. All active White Martians are Exposed
+2. All active Civilians have been Rescued
+
+The ambiguous "-1 total Civilians" line is gone per your call, and the
+earlier "all Heroes reach Watchtower = win" block is removed entirely —
+it's now the opposite (a loss condition, #5 above), since sending Heroes
+to safety before finishing the civilian rescues counts as abandoning the
+mission.
+
+Also fixed to match the newer, more authoritative "Phases of Play" doc:
+the Discuss tutorial guide now says 2 minutes (not 5) and "you may not
+nominate yourself" (the old doc said the opposite), and Vote's guide now
+mentions Targeted-for-Teleportation and accusation immunity. One thing I
+quietly dropped rather than guess about: the old doc's "toss a coin to
+break a tie" line isn't in the new doc, so I removed it from the Vote
+guide rather than state something no longer confirmed.
+
+## New: "How to Play" phase guides for new players
+
+At the start of every phase, through Round 3 only, players get a blue
+tutorial toast (separate from the amber ability-reminder toast, so both
+can show at once without colliding) explaining what to do:
+
+- **Report, Discuss, Vote, Rescue** — the same guidance for everyone,
+  cleaned up from your doc (e.g. Discuss explains the 5-minute window and
+  the nominate-and-second rule; Vote explains the thumbs up/down and
+  tie-breaking coin flip).
+- **Accuse, Eliminate, Protect, Inspect** — only players *without* a
+  matching tagged ability get a guide ("keep your eyes closed unless
+  called on"). Anyone who *does* have a relevant ability already gets the
+  specific ability text via the existing reminder toast, so they're not
+  told the same thing twice.
+
+After Round 3, these stop entirely, exactly as you asked — verified live
+that Round 4 sends no guide at all.
+
+**Two things worth your attention:**
+
+1. **The Vote! phase mismatch.** Your doc describes voting as: one player
+   gets nominated during Discuss, then *everyone* (including the nominee)
+   votes thumbs up/down on sending just that one person to Watchtower. The
+   app's actual digital voting still works differently — players pick from
+   a list of active candidates, and the top vote-getter wins. I wrote the
+   new guidance text to match your *real* rules, but the underlying
+   mechanic hasn't changed, so what the guide tells players to expect and
+   what the app actually does don't currently match. Want me to rebuild
+   the Vote mechanic to work the way you've described here (nominate in
+   Discuss, single-target thumbs up/down in Vote)?
+2. **Added the moderator lines to Prompts.** The three bracketed narration
+   cues in your doc ("This is Watchtower... Come in Justice League!",
+   "Teleporter engaged, mind the flash," "There's a burst of light...")
+   read like lines for you to read aloud, not player alerts — so I added
+   them to the host's Prompts panel instead of building them as player
+   pop-ups. Let me know if that's not what you meant.
 
 ## New: Win Condition — Heroes reach Watchtower
 

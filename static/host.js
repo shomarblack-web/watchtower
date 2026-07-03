@@ -875,15 +875,41 @@ function openPhaseScript(script) {
   showOverlay("phase-script-overlay");
 }
 
+let lastChecklistPhase = null;
+
 function renderPhaseScriptBody(script) {
   document.getElementById("phase-script-title").textContent = script.phase + "!";
-  const body = document.getElementById("phase-script-body");
-  body.innerHTML = script.lines.map(line => `<div class="phase-script-line">${line}</div>`).join("");
+
+  const linesEl = document.getElementById("phase-script-lines");
+  linesEl.innerHTML = script.lines.length
+    ? script.lines.map(line => `<div class="phase-script-line">${line}</div>`).join("")
+    : `<div class="phase-script-line" style="opacity:.6">No line to read for this phase - see the checklist below.</div>`;
+
+  const timerEl = document.getElementById("phase-script-timer");
+  timerEl.innerHTML = "";
   if (script.phase === "Discuss") {
-    body.innerHTML += `<button class="btn-primary" style="margin-top:14px" onclick="closePhaseScript(); openTimer(2*60, 'Discuss!');">Start 2-minute timer</button>`;
+    timerEl.innerHTML = `<button class="btn-primary" style="margin-top:14px" onclick="closePhaseScript(); openTimer(2*60, 'Discuss!');">Start 2-minute timer</button>`;
   }
   if (script.phase === "Vote") {
-    body.innerHTML += `<button class="btn-primary" style="margin-top:14px" onclick="closePhaseScript(); openTimer(2*60, 'Vote!');">Start 2-minute timer</button>`;
+    timerEl.innerHTML = `<button class="btn-primary" style="margin-top:14px" onclick="closePhaseScript(); openTimer(2*60, 'Vote!');">Start 2-minute timer</button>`;
+  }
+
+  // Only rebuild the checklist when the phase actually changes, so
+  // checking items off doesn't get wiped out by live script refreshes
+  // (e.g. Vote's tally updating every few seconds).
+  if (script.phase !== lastChecklistPhase) {
+    lastChecklistPhase = script.phase;
+    const checklistEl = document.getElementById("phase-script-checklist");
+    const items = script.checklist || [];
+    checklistEl.innerHTML = items.length
+      ? `<div class="checklist-heading">Host Checklist</div>` +
+        items.map((item, i) => `
+          <label class="checklist-item">
+            <input type="checkbox" id="checklist-${i}">
+            <span>${item}</span>
+          </label>
+        `).join("")
+      : "";
   }
 }
 
