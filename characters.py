@@ -160,12 +160,32 @@ for _c in CHARACTERS:
     _c["is_switchable"] = _c["id"] in SWITCH_CHARACTERS
     _c["reveal_name"] = SWITCH_CHARACTERS.get(_c["id"])
 
-# Harvey Dent/Two-Face's "Let Fate Decide" ability: once revealed, he can
-# target two active characters and take them hostage for a short timer.
-# Only usable post-reveal (it's a Villain-only tagged ability on his card).
-HOSTAGE_CHARACTERS = {"harvey_dent"}
+# ------------------------------------------------------------------------
+# Hostage-taking. A villain targets one player and takes them hostage; the
+# named "counterpart" hero has 10 seconds (a real-world, verbal callout -
+# "I am Batman!") to reveal their identity or the hostage loses 1 health.
+# counterpart is:
+#   - a character id: one specific hero must step up
+#   - "kryptonian": any currently-active character in KRYPTONIAN_IDS may
+#     step up to save the hostage
+#   - None: Two-Face's "Let Fate Decide" - free choice of two targets, no
+#     hero-reveal-to-save mechanic, resolved by coin flip instead
+# ------------------------------------------------------------------------
+KRYPTONIAN_IDS = {"superman", "supergirl", "superboy", "krypto"}
+
+HOSTAGE_ABILITIES = {
+    "tobias_whale": "black_lightning",
+    "reverse_flash": "the_flash",
+    "zoom": "the_flash",
+    "sinestro": "green_lantern",
+    "black_adam": "captain_marvel",
+    "faora": "kryptonian",
+    "reign": "kryptonian",
+    "harvey_dent": None,
+}
 for _c in CHARACTERS:
-    _c["has_hostage"] = _c["id"] in HOSTAGE_CHARACTERS
+    _c["has_hostage"] = _c["id"] in HOSTAGE_ABILITIES
+    _c["hostage_counterpart"] = HOSTAGE_ABILITIES.get(_c["id"])
 
 # Well-known comics epithets, used as hover text on the host console.
 # Deliberately not exhaustive - only characters with a genuinely

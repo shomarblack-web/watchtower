@@ -132,6 +132,80 @@ This version stores the roster as **data**, not code:
   name at once, matching the original's behavior (several coordinates
   intentionally point to the same location).
 
+## New: player-facing Conditions (Exposed / Eliminated / Rescued / Targeted)
+
+Pressing the associated action button now does two things: it toggles a
+real, persistent condition flag on that character (not just a log entry),
+and privately pops up an alert on that player's phone with the exact rules
+text, the moment it happens:
+
+- **Expose → Exposed!** — "Everyone now knows which Hero, Villain, or
+  Martian you are. You may no longer use your Active or Super Ability."
+- **End/ELM → Eliminated!** — "You were successfully targeted by the White
+  Martians without interference. You may no longer Discuss! or Vote!."
+- **Watchtower → Rescued!** — the full safety-zone text, including losing
+  Passive/Active/Super ability access.
+- **Teleport → Targeted!** — the "chosen during Discuss or Eliminate" text.
+
+Conditions **stack** — a character can be Exposed *and* Targeted at once,
+and both show as separate badges on their host row. **At the start of
+every new round**, any player with one or more active conditions gets a
+recap pop-up listing everything still in effect, exactly as you asked.
+Clicking Deactivate clears all of a character's conditions along with
+taking them off the board. These flags are purely informational/alerting
+for now — see below for what I deliberately didn't build yet.
+
+**Two things I need from you before going further:**
+
+1. **Round 3 vs Round 4 conflict.** You earlier told me Super Abilities
+   activate at Round 3, and I built exactly that. This new rules doc says
+   "A Super Ability may only be used after the start of Round 4." I have
+   not changed anything — the app still uses Round 3 — since I didn't want
+   to silently override a prior explicit instruction. Which one is
+   correct?
+2. **Scope of enforcement.** This rules doc describes a lot more than the
+   four conditions — real limits (Active Ability once per round, Super
+   Ability once per game total), exemptions (Passive/Active use never
+   causes Expose), team-specific asymmetries (a Rescued Villain only loses
+   their Active Ability, not Passive/Super; an Exposed Martian has no
+   penalty at all), and even a win condition (a Hero's wrong accusation
+   means the Martians win outright). I've only built the four conditions
+   and their alerts so far — I have not built any of the ability-use
+   limits, the exemptions, or the win-condition logic, since that's a much
+   larger scope than "add pop-ups" and deserves its own explicit go-ahead.
+   Want me to build that out next, or keep working through card
+   corrections first?
+
+## New: full Hostage mechanic (real-world reveal-to-save)
+
+Built out properly per your spec: a villain targets one active character
+and takes them hostage. Their card's named counterpart hero then has 10
+real-world seconds to stand up and declare their identity ("I am Batman!")
+or the hostage loses 1 health. This covers three shapes, all driven
+directly by each character's `hostage_counterpart` data:
+
+- **One specific named hero** — Tobias Whale (Black Lightning), Reverse
+  Flash & Zoom (The Flash), Sinestro (Green Lantern), Black Adam (Captain
+  Marvel)
+- **Any hero in a category** — Faora and Reign ("any Kryptonian" — the
+  banner lists whichever Kryptonian heroes are currently active)
+- **No counterpart at all** — Two-Face's "Let Fate Decide" keeps its
+  original free-choice-of-two-targets, coin-flip-flavored version, since
+  his card doesn't name a specific hero who can save anyone
+
+None of these (except Two-Face and Two-Face-only) require a reveal first —
+Tobias Whale, Reverse Flash, Zoom, Sinestro, Black Adam, and Faora are
+already their true selves from the start, so their Take Hostage button
+works as soon as they're active. Only Two-Face and Reign (both disguised
+civilians) need their Reveal button clicked first.
+
+When a hostage is taken, a persistent banner appears at the top of the
+host console — not just a toast that disappears — showing who needs to
+reveal and who's on the line, with two buttons: **✅ Revealed — Release**
+(no penalty) or **❌ Time's Up — Lose 1 HP** (reduces the hostage's health
+by one, same as any other health change). The banner stays up until you
+resolve it, so it survives you navigating around the console.
+
 ## Card content updates (round 6 of your corrections) — original 15 complete
 
 **Thunder** now has her real content, and with her, **all 15 characters

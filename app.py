@@ -33,7 +33,7 @@ from characters import (
     CHARACTERS, CHARACTERS_BY_ID, TEAM_LABELS, TEAM_COLORS, PHASES, NUM_ROUNDS,
     MAX_HEALTH, SHIELD_START, COLUMN_COLORS, DCEU_GRID, DCEU_LOCATIONS, PHASE_INFO,
     NARRATION_PROMPTS, INTRO_SCRIPT, PACKS, PACK_LABELS, SWITCH_CHARACTERS,
-    HOSTAGE_CHARACTERS,
+    HOSTAGE_ABILITIES, KRYPTONIAN_IDS,
 )
 
 CARDS = json.loads((Path(__file__).parent / "cards.json").read_text())
@@ -42,6 +42,43 @@ CARDS = json.loads((Path(__file__).parent / "cards.json").read_text())
 # text so we can remind a player of their move when that phase comes up.
 # e.g. "...may shield another player (Protect!)" -> tagged under "Protect".
 _PHASE_TAG_RE = re.compile(r"[/(]([A-Za-z]+)!\)")
+
+# ------------------------------------------------------------------------
+# Player-facing conditions. Each maps to one of the existing action
+# buttons; clicking it toggles a persistent flag (not just a one-off log
+# entry) and, when turned ON, privately alerts whoever's playing that
+# character with the exact rules text. At the start of every round, anyone
+# with an active condition gets a recap of everything still in effect.
+# ------------------------------------------------------------------------
+CONDITIONS = {
+    "expose": {
+        "flag": "exposed",
+        "title": "Exposed!",
+        "body": "Everyone now knows which Hero, Villain, or Martian you are. "
+                "You may no longer use your Active or Super Ability.",
+    },
+    "end": {
+        "flag": "eliminated",
+        "title": "Eliminated!",
+        "body": "You were successfully targeted by the White Martians without "
+                "interference. You may no longer Discuss! or Vote!.",
+    },
+    "watchtower": {
+        "flag": "rescued",
+        "title": "Rescued!",
+        "body": "You are in the safety zone of Watchtower. You may still "
+                "Discuss and Vote, but can no longer be targeted for "
+                "elimination or teleportation, and may no longer use your "
+                "Passive, Active, or Super Ability.",
+    },
+    "teleport": {
+        "flag": "targeted",
+        "title": "Targeted!",
+        "body": "You've been chosen during Discuss! to be Rescued, or during "
+                "Eliminate! to be eliminated.",
+    },
+}
+
 PHASE_SET_LOWER = {p.lower() for p in PHASES}
 
 ABILITY_PHASE_MAP = {}  # cid -> {phase_name: [ability_text, ...]}
@@ -75,6 +112,10 @@ def fresh_character_state():
             "fixed": False if c["has_fixit"] else None,
             "revealed": False if c["is_switchable"] else None,
             "hostage": False,
+            "exposed": False,
+            "eliminated": False,
+            "rescued": False,
+            "targeted": False,
         }
     return state
 
@@ -99,6 +140,7 @@ GAME = {
     "round_events": {"rescued": [], "eliminated": []},  # this round, so far
     "round_history": {},             # round_number -> {"rescued":[ids],"eliminated":[ids]}
     "super_abilities_announced": False,
+    "hostage_event": None,
 }
 
 
@@ -345,6 +387,7 @@ def public_state(reveal_names):
         "spotlight_characters": spotlight_characters(),
         "super_active_characters": super_active_characters(),
         "draft_characters": draft_characters(),
+        "hostage_event": GAME["hostage_event"],
         "activity": GAME["activity"],
         "map": GAME["map"],
         "players": GAME["players"],
@@ -410,6 +453,32 @@ def push_my_votes():
     for sid, name in PLAYER_SIDS.items():
         choice = GAME["votes"].get(name)
         socketio.emit("my_vote_result", {"voted": choice is not None, "choice": choice}, room=sid)
+
+
+def push_condition_alert(cid, title, body):
+    """Privately alert whoever's playing this character about a condition
+    that just started applying to them."""
+    pname = (GAME["characters"].get(cid, {}).get("player_name") or "").strip().lower()
+    if not pname:
+        return
+    for sid, name in PLAYER_SIDS.items():
+        if name.strip().lower() == pname:
+            socketio.emit("condition_alert", {"title": title, "body": body}, room=sid)
+
+
+def push_condition_recap():
+    """At the start of a new round, remind every player of whichever
+    conditions are still in effect for their character."""
+    for sid, name in PLAYER_SIDS.items():
+        cid = find_player_character_id(name)
+        if not cid:
+            continue
+        st = GAME["characters"].get(cid, {})
+        active = [c for c in CONDITIONS.values() if st.get(c["flag"])]
+        if active:
+            socketio.emit("condition_recap", {
+                "conditions": [{"title": c["title"], "body": c["body"]} for c in active]
+            }, room=sid)
 
 
 def push_phase_reminders():
@@ -538,6 +607,9 @@ def on_set_round(data):
         GAME["round_events"] = {"rescued": [], "eliminated": []}
     GAME["round"] = new_round
     log_activity(f"Round set to {GAME['round']}")
+
+    if new_round != old_round:
+        push_condition_recap()
 
     if new_round >= 3 and not GAME["super_abilities_announced"]:
         GAME["super_abilities_announced"] = True
@@ -720,43 +792,103 @@ def on_reveal_character(data):
 
 @socketio.on("take_hostage")
 def on_take_hostage(data):
-    """Two-Face's 'Let Fate Decide': target two active characters, marking
-    them hostage. Only usable once Harvey Dent has been revealed."""
+    """A villain takes a player hostage. If their card names a counterpart
+    hero (or a category like 'kryptonian'), that hero has 10 real-world
+    seconds to reveal their identity or the hostage loses 1 health -
+    tracked as GAME['hostage_event'] so the host console can show a
+    persistent resolve banner. Two-Face has no counterpart - his ability
+    is a free choice of two targets with no reveal-to-save consequence."""
     holder_id = data.get("holder_id")
     target_ids = data.get("target_ids") or []
     holder = CHARACTERS_BY_ID.get(holder_id)
     holder_st = GAME["characters"].get(holder_id)
     if not holder or not holder_st or not holder.get("has_hostage"):
         return
-    if not holder_st.get("revealed"):
+    if holder.get("is_switchable") and not holder_st.get("revealed"):
         socketio.emit("character_limit_error", {
             "message": f"{holder['name']} must be revealed before taking hostages."
         }, room=request.sid)
         return
+
+    counterpart = holder.get("hostage_counterpart")
     target_ids = [t for t in dict.fromkeys(target_ids) if t != holder_id]
-    if len(target_ids) != 2 or any(
-        t not in GAME["characters"] or not GAME["characters"][t]["active"] for t in target_ids
-    ):
+
+    if counterpart is None:
+        # Two-Face: free choice of exactly two targets, resolved by coin
+        # flip / host judgment - no automatic reveal-to-save consequence.
+        if len(target_ids) != 2 or any(
+            t not in GAME["characters"] or not GAME["characters"][t]["active"] for t in target_ids
+        ):
+            socketio.emit("character_limit_error", {
+                "message": "Pick exactly two active characters to take hostage."
+            }, room=request.sid)
+            return
+        names = []
+        for t in target_ids:
+            GAME["characters"][t]["hostage"] = True
+            names.append(display_name_for(t))
+        log_activity(f"{display_name_for(holder_id)} takes {names[0]} and {names[1]} hostage!")
+        broadcast()
+        return
+
+    # Named or category counterpart: exactly one hostage target, then a
+    # 10-second real-world window for the counterpart hero to reveal.
+    if (len(target_ids) != 1 or target_ids[0] not in GAME["characters"]
+            or not GAME["characters"][target_ids[0]]["active"]):
         socketio.emit("character_limit_error", {
-            "message": "Pick exactly two active characters to take hostage."
+            "message": "Pick exactly one active character to take hostage."
         }, room=request.sid)
         return
-    names = []
-    for t in target_ids:
-        GAME["characters"][t]["hostage"] = True
-        names.append(display_name_for(t))
-    log_activity(f"{display_name_for(holder_id)} takes {names[0]} and {names[1]} hostage!")
+    hostage_id = target_ids[0]
+
+    if counterpart == "kryptonian":
+        counterpart_ids = [cid for cid in KRYPTONIAN_IDS if GAME["characters"].get(cid, {}).get("active")]
+        counterpart_label = _join_names([display_name_for(c) for c in counterpart_ids]) or "a Kryptonian"
+    else:
+        counterpart_ids = [counterpart]
+        counterpart_label = display_name_for(counterpart)
+
+    GAME["characters"][hostage_id]["hostage"] = True
+    GAME["hostage_event"] = {
+        "holder_id": holder_id,
+        "hostage_id": hostage_id,
+        "counterpart_ids": counterpart_ids,
+        "counterpart_label": counterpart_label,
+    }
+    log_activity(
+        f"{display_name_for(holder_id)} takes {display_name_for(hostage_id)} hostage! "
+        f"{counterpart_label} has 10 seconds to reveal."
+    )
     broadcast()
 
 
 @socketio.on("release_hostage")
 def on_release_hostage(data):
+    """The counterpart hero revealed in time - hostage is safe."""
     cid = data.get("id")
     st = GAME["characters"].get(cid)
     if not st or not st.get("hostage"):
         return
     st["hostage"] = False
-    log_activity(f"{display_name_for(cid)} released from hostage")
+    if GAME["hostage_event"] and GAME["hostage_event"]["hostage_id"] == cid:
+        GAME["hostage_event"] = None
+    log_activity(f"{display_name_for(cid)} released from hostage - saved in time!")
+    broadcast()
+
+
+@socketio.on("hostage_consequence")
+def on_hostage_consequence(data):
+    """Nobody revealed in time - the hostage loses 1 health."""
+    cid = data.get("id")
+    st = GAME["characters"].get(cid)
+    if not st or not st.get("hostage"):
+        return
+    st["hostage"] = False
+    if st["health"] is not None:
+        st["health"] = max(0, st["health"] - 1)
+    if GAME["hostage_event"] and GAME["hostage_event"]["hostage_id"] == cid:
+        GAME["hostage_event"] = None
+    log_activity(f"No one revealed in time - {display_name_for(cid)} loses 1 health!")
     broadcast()
 
 
@@ -789,6 +921,8 @@ def on_character_action(data):
     if action == "deactivate":
         st["active"] = False
         st["last_action"] = None
+        for cond in CONDITIONS.values():
+            st[cond["flag"]] = False
         log_activity(f"{name} deactivated")
     else:
         st["last_action"] = action
@@ -799,6 +933,12 @@ def on_character_action(data):
             GAME["round_events"]["rescued"].append(cid)
         if action == "end" and cid not in GAME["round_events"]["eliminated"]:
             GAME["round_events"]["eliminated"].append(cid)
+        # Condition toggle + private player alert, only on turning ON.
+        if action in CONDITIONS:
+            cond = CONDITIONS[action]
+            st[cond["flag"]] = not st[cond["flag"]]
+            if st[cond["flag"]]:
+                push_condition_alert(cid, cond["title"], cond["body"])
     broadcast()
 
 
@@ -962,6 +1102,7 @@ def on_new_game():
     GAME["round_events"] = {"rescued": [], "eliminated": []}
     GAME["round_history"] = {}
     GAME["super_abilities_announced"] = False
+    GAME["hostage_event"] = None
     # Player roster is left exactly as the host set it up via the New Game
     # dialog (remove/add/remove-all) - no automatic repopulation here.
     log_activity("New game started")

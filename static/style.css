@@ -300,6 +300,15 @@ body{
   border-radius: 4px; padding: 1px 5px; margin-left: 6px; vertical-align: middle;
   background: rgba(255,138,92,.10); cursor: pointer;
 }
+.condition-badge{
+  font-family:'Rajdhani', sans-serif; font-size:9px; font-weight:700;
+  letter-spacing:.03em; border-radius: 4px; padding: 1px 5px;
+  margin-left: 6px; vertical-align: middle;
+}
+.condition-exposed{ color: #f5d76e; border: 1px solid #f5d76e; background: rgba(245,215,110,.10); }
+.condition-eliminated{ color: var(--down); border: 1px solid var(--down); background: rgba(239,85,104,.10); }
+.condition-rescued{ color: var(--alive); border: 1px solid var(--alive); background: rgba(79,201,126,.10); }
+.condition-targeted{ color: #ff8a5c; border: 1px solid #ff8a5c; background: rgba(255,138,92,.10); }
 .hostage-modal{ max-width: 440px; }
 .hostage-target-list{ display:flex; flex-direction:column; gap:6px; max-height: 260px; overflow-y:auto; }
 .hostage-target{
@@ -482,6 +491,17 @@ body{
   color: var(--down); box-shadow: 0 4px 20px rgba(0,0,0,.4);
 }
 
+.hostage-banner{
+  position: fixed; top: 10px; left: 50%; transform: translateX(-50%);
+  width: min(94vw, 560px); background: var(--panel);
+  border: 2px solid #b8462f; border-radius: 10px; padding: 14px 18px;
+  z-index: 71; font-size: 14px; color: var(--text);
+  box-shadow: 0 4px 24px rgba(184,70,47,.4);
+  display: flex; flex-direction: column; gap: 10px; align-items: center; text-align: center;
+}
+.hostage-banner-buttons{ display: flex; gap: 10px; }
+.hostage-banner-buttons button{ width: auto; }
+
 /* ---------- new game player management ---------- */
 #newgame-player-list{ display:flex; flex-direction:column; gap:6px; margin: 10px 0; max-height: 240px; overflow-y:auto; }
 .newgame-player-row{
@@ -592,6 +612,8 @@ body{
   border: 1px solid var(--alive); color: var(--alive); font-family:'Rajdhani',sans-serif;
   font-weight:700; letter-spacing:.08em; text-transform:uppercase; margin-top: 10px;
 }
+.condition-entry{ border-bottom: 1px dotted var(--line); }
+.condition-entry:last-child{ border-bottom: none; }
 
 /* ---------- Kirby Krackle frame (player-facing cards) ---------- */
 .kirby-frame{

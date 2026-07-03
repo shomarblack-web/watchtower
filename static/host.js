@@ -373,6 +373,7 @@ socket.on("state", (state) => {
   });
 
   renderPlayersPanel(state);
+  renderHostageBanner(state);
   renderNewGamePlayerList(state);
 
   const spotlightSet = new Set(state.spotlight_characters || []);
@@ -427,10 +428,11 @@ socket.on("state", (state) => {
 
     const hostageBtn = row.querySelector(".hostage-btn");
     if (hostageBtn) {
-      hostageBtn.disabled = !st.revealed;
-      hostageBtn.title = st.revealed
-        ? "Let Fate Decide - take two players hostage"
-        : "Reveal this character first";
+      const needsReveal = c.is_switchable && !st.revealed;
+      hostageBtn.disabled = needsReveal;
+      hostageBtn.title = needsReveal
+        ? "Reveal this character first"
+        : "Take a player hostage";
     }
 
     let hostageBadge = row.querySelector(".hostage-badge");
@@ -446,6 +448,27 @@ socket.on("state", (state) => {
     } else if (hostageBadge) {
       hostageBadge.remove();
     }
+
+    const CONDITION_BADGES = {
+      exposed: ["👁️ Exposed", "condition-exposed"],
+      eliminated: ["☠️ Eliminated", "condition-eliminated"],
+      rescued: ["🏠 Rescued", "condition-rescued"],
+      targeted: ["🎯 Targeted", "condition-targeted"],
+    };
+    Object.entries(CONDITION_BADGES).forEach(([flag, [label, cls]]) => {
+      let badge = row.querySelector(`.condition-badge.${cls}`);
+      if (st[flag]) {
+        if (!badge) {
+          badge = document.createElement("span");
+          badge.className = `condition-badge ${cls}`;
+          badge.title = "Click the action button again to clear";
+          badge.textContent = label;
+          row.querySelector(".char-name").appendChild(badge);
+        }
+      } else if (badge) {
+        badge.remove();
+      }
+    });
 
     const healthVal = row.querySelector('[data-role="health"]');
     if (healthVal) {
@@ -609,14 +632,37 @@ function closeCard() {
   document.getElementById("card-overlay").style.display = "none";
 }
 
-// ---- hostage modal (Two-Face: Let Fate Decide) ----
+// ---- hostage modal ----
 let hostageHolderId = null;
 let hostageSelected = [];
+let hostageMaxTargets = 1;
 
 function openHostageModal(holderId) {
   hostageHolderId = holderId;
   hostageSelected = [];
+  const c = CHARACTERS.find(x => x.id === holderId);
+  const counterpart = c ? c.hostage_counterpart : null;
+  hostageMaxTargets = counterpart === null || counterpart === undefined ? 2 : 1;
+
+  const title = document.getElementById("hostage-modal-title");
+  const desc = document.getElementById("hostage-modal-desc");
+  const coinRow = document.getElementById("hostage-coin-row");
+  const confirmBtn = document.getElementById("hostage-confirm-btn");
   document.getElementById("coin-result").textContent = "";
+
+  if (hostageMaxTargets === 2) {
+    title.textContent = `${c.name} — Let Fate Decide`;
+    desc.textContent = "Pick exactly two active characters to take hostage. Flip the coin to let fate decide their outcome, then use the normal action buttons on their rows however that plays out.";
+    coinRow.style.display = "block";
+    confirmBtn.textContent = "Take Hostage";
+  } else {
+    const counterpartLabel = counterpart === "kryptonian" ? "Any active Kryptonian hero" : (CHARACTERS.find(x => x.id === counterpart) || {}).name || counterpart;
+    title.textContent = `${c.name} — Take Hostage`;
+    desc.textContent = `Pick one active character to take hostage. ${counterpartLabel} will have 10 real-world seconds to reveal their identity, or the hostage loses 1 health.`;
+    coinRow.style.display = "none";
+    confirmBtn.textContent = "Take Hostage (10s)";
+  }
+
   renderHostageTargets();
   document.getElementById("hostage-overlay").style.display = "flex";
 }
@@ -658,20 +704,48 @@ function renderHostageTargets() {
 function toggleHostageTarget(cid) {
   if (hostageSelected.includes(cid)) {
     hostageSelected = hostageSelected.filter(x => x !== cid);
-  } else if (hostageSelected.length < 2) {
+  } else if (hostageSelected.length < hostageMaxTargets) {
     hostageSelected.push(cid);
   }
   renderHostageTargets();
 }
 
 function confirmHostage() {
-  if (hostageSelected.length !== 2) {
-    alert("Pick exactly two characters first.");
+  if (hostageSelected.length !== hostageMaxTargets) {
+    alert(`Pick exactly ${hostageMaxTargets} character${hostageMaxTargets > 1 ? "s" : ""} first.`);
     return;
   }
   socket.emit("take_hostage", { holder_id: hostageHolderId, target_ids: hostageSelected });
   closeHostageModal();
-  openTimer(10, "Let Fate Decide!");
+  if (hostageMaxTargets === 2) {
+    openTimer(10, "Let Fate Decide!");
+  } else {
+    openTimer(10, "Reveal or lose 1 HP!");
+  }
+}
+
+// ---- hostage resolution banner (named/category counterpart) ----
+function renderHostageBanner(state) {
+  const banner = document.getElementById("hostage-banner");
+  const event = state.hostage_event;
+  if (!event) {
+    banner.style.display = "none";
+    return;
+  }
+  const hostageName = (state.characters[event.hostage_id] || {}).display_name || event.hostage_id;
+  document.getElementById("hostage-banner-text").innerHTML =
+    `<b>${event.counterpart_label}</b> has 10 seconds to reveal, or <b>${hostageName}</b> loses 1 HP.`;
+  banner.style.display = "flex";
+}
+
+function resolveHostageRelease() {
+  if (!latestState || !latestState.hostage_event) return;
+  socket.emit("release_hostage", { id: latestState.hostage_event.hostage_id });
+}
+
+function resolveHostageConsequence() {
+  if (!latestState || !latestState.hostage_event) return;
+  socket.emit("hostage_consequence", { id: latestState.hostage_event.hostage_id });
 }
 
 // ---- Discuss! countdown timer ----

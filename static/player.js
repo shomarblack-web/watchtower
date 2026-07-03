@@ -63,6 +63,31 @@ function closeSuperOverlay() {
   document.getElementById("super-overlay").style.display = "none";
 }
 
+// ---- conditions (Exposed / Eliminated / Rescued / Targeted) ----
+socket.on("condition_alert", (data) => {
+  renderConditionOverlay([data]);
+});
+
+socket.on("condition_recap", (data) => {
+  renderConditionOverlay(data.conditions || []);
+});
+
+function renderConditionOverlay(conditions) {
+  if (!conditions.length) return;
+  const body = document.getElementById("condition-list-body");
+  body.innerHTML = conditions.map(c => `
+    <div class="condition-entry">
+      <div class="reveal-label" style="color:var(--amber)">${c.title}</div>
+      <div style="font-size:14px; color:var(--text); margin:8px 0 14px; line-height:1.5">${c.body}</div>
+    </div>
+  `).join("");
+  document.getElementById("condition-overlay").style.display = "flex";
+}
+
+function closeConditionOverlay() {
+  document.getElementById("condition-overlay").style.display = "none";
+}
+
 // ---- my card ----
 socket.on("my_card_result", (data) => {
   const body = document.getElementById("mycard-body");
