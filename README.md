@@ -132,6 +132,83 @@ This version stores the roster as **data**, not code:
   name at once, matching the original's behavior (several coordinates
   intentionally point to the same location).
 
+## New: five host/player refinements
+
+1. **Player's "Active on the Board" list is now names only** — no health,
+   no shield, nothing about what a character can do. Players can see
+   what's in play, not what it's capable of.
+2. **Character-count enforcement once the roster is locked.** Locking with
+   more active characters than players pops a warning telling you exactly
+   how many to deactivate. After locking, trying to activate a character
+   beyond the player count is blocked outright with an explanation —
+   enforced server-side, not just a UI restriction.
+3. **White Martian card added.** You found the actual source — it turns out
+   my search missed it because the original function was named `mart_stats`
+   rather than containing the word "martian" anywhere, which is exactly
+   what I searched for. Both White Martian slots now show: Passive —
+   Shapeshifter (acts as Civilian/Bystander until Exposed), Active —
+   Telepathic Attack (Eliminate!), and Super — Mind Merge (Discuss!, with
+   the Martian Manhunter win condition). Since Mind Merge and Telepathic
+   Attack are tagged to Discuss and Eliminate respectively, White Martians
+   now also correctly trigger the phase-reminder toast (player side) and
+   the gold spotlight glow (host side) during those phases, automatically
+   — no extra code needed since both features already read these tags off
+   the card.
+4. **End → ELM.** Purely a label change (short for "Eliminated") — the
+   underlying action, tooltip, and tracking are unchanged.
+5. **Phase-relevant characters now spotlight** — a pulsing gold glow
+   around any active character whose card has an ability tagged for the
+   phase currently selected (the same tagging system that powers player
+   phase reminders). Superman lights up during Protect and Accuse, for
+   instance, since his card has abilities tied to both.
+
+## New: player-facing voting redesign
+
+Three changes to how players vote, all tested live:
+
+1. **Players see real player names during Vote, never character names.**
+   The vote list is now a flat list of real names — completely decorrelated
+   from character identity, not just hidden in the UI. Even opening browser
+   dev tools during Vote phase won't reveal who's playing whom; the payload
+   sent to players literally contains no character IDs alongside the names.
+2. **One vote only, enforced by the server** — not just the UI. Once a vote
+   is recorded, the server rejects any further vote from that player, so
+   refreshing the page or replaying the request can't change it.
+3. **A confirmation step before submitting.** Tapping a name shows "Vote for
+   X?" with Confirm/Cancel buttons; nothing is sent to the server until
+   Confirm is tapped. After that, the list locks and shows "Vote locked in
+   for X."
+
+Accuse no longer accepts app-based votes (previously it shared the voting
+window with Vote phase) — it now has its own distinct narration line only,
+matching how you'd described it as a separate spoken-accusation step. Say
+the word if you actually wanted digital voting there too.
+
+**A bug I found and fixed while building this**: three buttons whose click
+handler needed to reference a player's name — the Players panel's
+click-to-eliminate, the New Game dialog's remove-player button, and (before
+today) nothing on the vote list — were vulnerable to breaking on names
+containing certain characters, because the name was being inserted directly
+into an HTML `onclick="..."` attribute. It happened to work in every test
+so far only because the names used didn't trigger it. All three now use a
+safer pattern that isn't sensitive to what characters appear in a name.
+
+## New: manage players when starting a new game
+
+Clicking **New game** now opens a "Start New Game" dialog instead of
+immediately resetting everything:
+
+- **Remove** any individual player with the ✕ next to their name
+- **Remove All Players** to clear the roster entirely
+- **Add a player by name** — useful for someone joining in person without
+  needing to register from their own phone first
+- Removals/additions apply live as soon as you make them, so you can leave
+  the dialog open and adjust things as people arrive or drop out
+- **Start New Game** performs the actual reset (round, board, packs, all
+  character assignments) while keeping whichever players are listed in the
+  dialog at that moment — nothing auto-repopulates from who's currently
+  connected anymore, so the roster is exactly what you set it to.
+
 ## New: epithet hover text
 
 Hovering a character's name now shows their well-known comics epithet

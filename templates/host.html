@@ -8,6 +8,8 @@
 </head>
 <body>
 
+<div id="host-toast" class="host-toast" style="display:none"></div>
+
 <div class="topbar">
   <div class="brand">WHITE MARTIAN <span>&reg;</span><small>WATCHTOWER — HOST CONSOLE</small></div>
   <div style="display:flex; align-items:center; gap:12px">
@@ -66,7 +68,30 @@
     </div>
 
     <div class="panel">
-      <button class="btn-ghost" title="Reset entire game" onclick="if(confirm('Start a brand new game? This resets everyone.')) socket.emit('new_game')">New game</button>
+      <button class="btn-ghost" title="Reset entire game" onclick="openNewGameModal()">New game</button>
+    </div>
+  </div>
+</div>
+
+<div id="newgame-overlay" class="map-overlay" style="display:none" onclick="if(event.target===this) closeNewGameModal()">
+  <div class="card-modal">
+    <div class="map-modal-head">
+      <h3 style="margin:0">Start New Game</h3>
+      <button class="btn-ghost" style="width:auto;padding:6px 12px" onclick="closeNewGameModal()">Close</button>
+    </div>
+    <div id="newgame-body">
+      <p style="color:var(--muted); font-size:13px; margin-top:0">
+        Remove or add players below — changes apply right away. When you're
+        ready, click "Start New Game" to reset the round, board, and packs
+        while keeping whichever players are listed here.
+      </p>
+      <div id="newgame-player-list"></div>
+      <div class="newgame-add-row">
+        <input type="text" id="newgame-add-input" class="name-input" placeholder="Add a player by name…" style="margin-bottom:0">
+        <button class="btn-ghost" style="width:auto;margin:0" onclick="addPlayerFromModal()">Add</button>
+      </div>
+      <button class="btn-ghost" style="margin-top:10px" onclick="if(confirm('Remove every player from the roster?')) socket.emit('remove_all_players')">Remove All Players</button>
+      <button class="btn-primary" style="margin-top:14px" onclick="confirmStartNewGame()">Start New Game</button>
     </div>
   </div>
 </div>

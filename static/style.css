@@ -239,6 +239,16 @@ body{
   opacity: .55;
 }
 .char-row.active{ opacity: 1; border-color: rgba(255,255,255,.14); }
+.char-row.spotlight{
+  border-color: var(--amber) !important;
+  border-width: 2px;
+  box-shadow: 0 0 14px rgba(245,166,35,.5), inset 0 0 20px rgba(245,166,35,.08);
+  animation: spotlight-pulse 2s ease-in-out infinite;
+}
+@keyframes spotlight-pulse{
+  0%, 100% { box-shadow: 0 0 10px rgba(245,166,35,.4), inset 0 0 14px rgba(245,166,35,.06); }
+  50% { box-shadow: 0 0 20px rgba(245,166,35,.7), inset 0 0 24px rgba(245,166,35,.12); }
+}
 
 .char-toggle{
   width:16px; height:16px; border-radius: 4px; border:1px solid var(--muted);
@@ -280,9 +290,19 @@ body{
 .action-btn.sel{ background: var(--amber); color:#1a1305; border-color: var(--amber); }
 .action-btn.deactivate:hover{ border-color: var(--down); color: var(--down); }
 
-.prot-row{ display:flex; gap:3px; }
-.prot-dot{ width:12px; height:12px; border-radius:50%; border:1px solid var(--line); cursor:pointer; background:transparent; }
-.prot-dot.on{ background: var(--amber); border-color: var(--amber); }
+.prot-wrap{ display:flex; flex-direction:column; align-items:flex-end; gap:2px; }
+.prot-label{
+  font-family:'Rajdhani', sans-serif; font-weight:700; font-size:9px;
+  letter-spacing:.08em; text-transform:uppercase; color: var(--muted);
+}
+.prot-row{ display:flex; gap:4px; }
+.prot-dot{
+  width:15px; height:15px; border-radius:50%;
+  border: 2.5px solid var(--muted);
+  cursor:pointer; background:transparent;
+  box-sizing: border-box;
+}
+.prot-dot.on{ background: var(--amber); border-color: var(--amber); box-shadow: 0 0 6px rgba(245,166,35,.6); }
 
 /* ---------- steppers (health / shield) ---------- */
 .stepper{
@@ -409,6 +429,28 @@ body{
   background: rgba(239,85,104,.12); border:1px solid var(--down); color: var(--down);
 }
 
+.host-toast{
+  position: fixed; top: 10px; left: 50%; transform: translateX(-50%);
+  width: min(94vw, 520px); background: var(--panel); border: 1px solid var(--down);
+  border-radius: 10px; padding: 12px 16px; z-index: 70; font-size: 13px;
+  color: var(--down); box-shadow: 0 4px 20px rgba(0,0,0,.4);
+}
+
+/* ---------- new game player management ---------- */
+#newgame-player-list{ display:flex; flex-direction:column; gap:6px; margin: 10px 0; max-height: 240px; overflow-y:auto; }
+.newgame-player-row{
+  display:flex; justify-content:space-between; align-items:center;
+  padding: 8px 10px; border-radius:6px; background: var(--panel-raised);
+  border: 1px solid var(--line); font-size: 14px;
+}
+.newgame-remove-btn{
+  background:none; border:1px solid var(--line); color: var(--down);
+  border-radius:4px; width:24px; height:24px; cursor:pointer; font-size:14px; line-height:1;
+}
+.newgame-remove-btn:hover{ border-color: var(--down); background: rgba(239,85,104,.12); }
+.newgame-add-row{ display:flex; gap:8px; align-items:center; }
+.newgame-add-row .name-input{ flex:1; }
+
 .btn-primary{
   font-family:'Rajdhani',sans-serif; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
   background: var(--amber); color:#1a1305; border:none; border-radius:6px; padding:10px 14px;
@@ -482,6 +524,16 @@ body{
 }
 .vote-option.picked{ border-color: var(--amber); background: rgba(245,166,35,.12); }
 .vote-option .team-dot{ margin-right: 8px; }
+.vote-option.locked-option{ cursor: default; opacity: .55; }
+.vote-option.locked-option.picked{ opacity: 1; }
+
+.vote-confirm-prompt{
+  margin-top: 12px; padding: 14px; border-radius: 8px;
+  background: rgba(245,166,35,.10); border: 1px solid var(--amber);
+  text-align: center; font-size: 15px;
+}
+.vote-confirm-buttons{ display:flex; gap:8px; margin-top: 10px; }
+.vote-confirm-buttons button{ margin:0; }
 
 .name-input{
   width:100%; padding:12px 14px; border-radius:8px; border:1px solid var(--line);

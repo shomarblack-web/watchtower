@@ -122,7 +122,16 @@ function dismissReminder() {
   document.getElementById("phase-reminder-toast").style.display = "none";
 }
 
-const VOTE_PHASES = ["Vote", "Accuse"];
+const VOTE_PHASES = ["Vote"];
+let myVoteLocked = false;
+let pendingVote = null;
+
+socket.on("my_vote_result", (data) => {
+  myVote = data.choice || null;
+  myVoteLocked = !!data.voted;
+  pendingVote = null;
+  if (latestState) renderVoteList(latestState);
+});
 
 socket.on("state", (state) => {
   latestState = state;
@@ -137,7 +146,6 @@ socket.on("state", (state) => {
   votePanel.style.display = inVotePhase ? "block" : "none";
 
   if (inVotePhase) {
-    myVote = state.votes[myName] || null;
     renderVoteList(state);
   }
 
@@ -146,28 +154,60 @@ socket.on("state", (state) => {
 
 function renderVoteList(state) {
   const list = document.getElementById("vote-list");
-  const active = CHARACTERS.filter(c => state.characters[c.id] && state.characters[c.id].active);
-  if (!active.length) {
+  const candidates = state.vote_candidates || [];
+  const confirmEl = document.getElementById("vote-confirm");
+
+  if (!candidates.length) {
     list.innerHTML = `<div class="empty">No one is on the board yet.</div>`;
+    confirmEl.innerHTML = "";
     return;
   }
-  list.innerHTML = active.map(c => `
-    <div class="vote-option ${myVote === c.id ? 'picked' : ''}" onclick="castVote('${c.id}')">
-      <span><span class="team-dot" style="background:${TEAM_COLORS[c.team]}"></span>${c.name}</span>
-      ${myVote === c.id ? '<b>✓</b>' : ''}
+
+  if (myVoteLocked) {
+    list.innerHTML = candidates.map(name => `
+      <div class="vote-option locked-option ${myVote === name ? 'picked' : ''}">
+        <span>${name}</span>
+        ${myVote === name ? '<b>✓</b>' : ''}
+      </div>
+    `).join("");
+    confirmEl.innerHTML = `<div class="confirm-banner">Vote locked in for ${myVote}</div>`;
+    return;
+  }
+
+  list.innerHTML = candidates.map((name, i) => `
+    <div class="vote-option ${pendingVote === name ? 'picked' : ''}" data-idx="${i}">
+      <span>${name}</span>
     </div>
   `).join("");
+  list.querySelectorAll(".vote-option").forEach((el, i) => {
+    el.addEventListener("click", () => selectVoteCandidate(candidates[i]));
+  });
 
-  const confirm = document.getElementById("vote-confirm");
-  confirm.innerHTML = myVote
-    ? `<div class="confirm-banner">Vote locked in</div>`
+  confirmEl.innerHTML = pendingVote
+    ? `<div class="vote-confirm-prompt">
+         <div>Vote for <b>${pendingVote}</b>?</div>
+         <div class="vote-confirm-buttons">
+           <button class="btn-primary" onclick="submitVote()">Confirm Vote</button>
+           <button class="btn-ghost" onclick="cancelPendingVote()">Cancel</button>
+         </div>
+       </div>`
     : "";
 }
 
-function castVote(targetId) {
-  if (!myName) return;
-  myVote = targetId;
-  socket.emit("cast_vote", { voter: myName, target_id: targetId });
+function selectVoteCandidate(name) {
+  if (myVoteLocked) return;
+  pendingVote = name;
+  renderVoteList(latestState);
+}
+
+function cancelPendingVote() {
+  pendingVote = null;
+  renderVoteList(latestState);
+}
+
+function submitVote() {
+  if (!myName || !pendingVote || myVoteLocked) return;
+  socket.emit("cast_vote", { voter: myName, target_name: pendingVote });
 }
 
 function renderActiveList(state) {
@@ -178,15 +218,6 @@ function renderActiveList(state) {
     return;
   }
   el.innerHTML = active.map(c => {
-    const st = state.characters[c.id];
-    let statusBits = [];
-    if (st.health !== null && st.health !== undefined) {
-      statusBits.push(`<span style="color:${st.health === 0 ? 'var(--down)' : 'var(--muted)'}">HP ${st.health}</span>`);
-    }
-    if (st.shield !== null && st.shield !== undefined) {
-      statusBits.push(`<span style="color:var(--hero)">🛡${st.shield}</span>`);
-    }
-    const status = statusBits.length ? ` — ${statusBits.join(" · ")}` : "";
-    return `<div class="feed-item"><span class="team-dot" style="background:${TEAM_COLORS[c.team]};display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px"></span>${c.name}${st.player_name ? ' — ' + st.player_name : ''}${status}</div>`;
+    return `<div class="feed-item"><span class="team-dot" style="background:${TEAM_COLORS[c.team]};display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px"></span>${c.name}</div>`;
   }).join("");
 }

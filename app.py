@@ -108,11 +108,37 @@ def log_activity(text):
 
 
 def vote_tally():
+    """Tally by real player name now (not character id) - see cast_vote."""
     tally = {}
-    for target_id in GAME["votes"].values():
-        tally[target_id] = tally.get(target_id, 0) + 1
-    # sort descending by count
+    for target_name in GAME["votes"].values():
+        tally[target_name] = tally.get(target_name, 0) + 1
     return sorted(tally.items(), key=lambda kv: -kv[1])
+
+
+def vote_candidates():
+    """Real names of every player currently behind an active character -
+    the pool of people who can be voted for. Deliberately just names, with
+    no character id attached, so the payload can't be used to reconstruct
+    who's playing whom even by someone inspecting raw network traffic.
+    """
+    return [
+        st["player_name"] for st in GAME["characters"].values()
+        if st["active"] and st.get("player_name")
+    ]
+
+
+def spotlight_characters():
+    """Active character ids whose card has an ability tagged for whatever
+    phase is currently selected - used to highlight them on the host
+    console as a "hey, this character has a move right now" reminder."""
+    idx = GAME["phase_index"]
+    if idx is None:
+        return []
+    phase = PHASES[idx]
+    return [
+        cid for cid, st in GAME["characters"].items()
+        if st["active"] and phase in ABILITY_PHASE_MAP.get(cid, {})
+    ]
 
 
 def _join_names(names):
@@ -133,14 +159,6 @@ def _active_names_by_team(team):
         for cid, st in GAME["characters"].items()
         if st["active"] and CHARACTERS_BY_ID.get(cid, {}).get("team") == team
     ]
-
-
-def _character_display_name(cid):
-    """Real player name if assigned, else the character's own name."""
-    st = GAME["characters"].get(cid)
-    if not st:
-        return None
-    return st.get("player_name") or CHARACTERS_BY_ID.get(cid, {}).get("name")
 
 
 def render_phase_script():
@@ -190,15 +208,11 @@ def render_phase_script():
         ]}
 
     if phase == "Vote":
-        nominees = _join_names([
-            st["player_name"] for cid, st in GAME["characters"].items()
-            if st["active"] and st.get("player_name")
-        ])
+        nominees = _join_names(vote_candidates())
         lines = [f"1. Raise your hand if you want {nominees} to reach Watchtower?"]
         tally = vote_tally()
         if tally:
-            winner_name = _character_display_name(tally[0][0]) or "the winner"
-            lines.append(f"2. Calibrating teleporter. Keep still {winner_name}.")
+            lines.append(f"2. Calibrating teleporter. Keep still {tally[0][0]}.")
         else:
             lines.append("2. Calibrating teleporter\u2026 (waiting for votes)")
         return {"phase": "Vote", "kind": "live", "lines": lines}
@@ -209,9 +223,7 @@ def render_phase_script():
         ]}
 
     if phase == "Rescue":
-        winner_name = "the winner"
-        if GAME["last_vote_winner"]:
-            winner_name = _character_display_name(GAME["last_vote_winner"]) or winner_name
+        winner_name = GAME["last_vote_winner"] or "the winner"
         return {"phase": "Rescue", "kind": "static", "lines": [
             f"I'm beaming up {winner_name}",
             "MIND THE FLASH OF THE TELEPORTER BEAM. EVERYONE, EYES CLOSED!",
@@ -224,9 +236,13 @@ def public_state(reveal_names):
     """Everything the frontend needs to render, in one payload.
 
     reveal_names=True (host only) includes each character's assigned player
-    name. reveal_names=False (players) strips that field entirely so no
-    phone can see who's playing whom - except each player privately learns
-    their own via the separate 'whoami_result' event below.
+    name, plus the raw voter->target map. reveal_names=False (players)
+    strips both: player_name is blanked so no phone can see who's playing
+    whom (each player privately learns their own via 'whoami_result'), and
+    the vote data they get is a bare, decorrelated list of candidate names
+    (vote_candidates) plus a total count - never anything that ties a name
+    back to a character id, and never who voted for whom. Each player's own
+    locked-in choice comes separately via 'my_vote_result'.
     """
     characters = {}
     for cid, st in GAME["characters"].items():
@@ -234,14 +250,17 @@ def public_state(reveal_names):
         if not reveal_names:
             c["player_name"] = ""
         characters[cid] = c
-    return {
+    current_phase = PHASES[GAME["phase_index"]] if GAME["phase_index"] is not None else None
+    state = {
         "round": GAME["round"],
         "num_rounds": NUM_ROUNDS,
         "phase_index": GAME["phase_index"],
         "phases": PHASES,
         "characters": characters,
-        "votes": GAME["votes"],
         "tally": vote_tally(),
+        "vote_count": len(GAME["votes"]),
+        "vote_candidates": vote_candidates() if current_phase == "Vote" else [],
+        "spotlight_characters": spotlight_characters(),
         "activity": GAME["activity"],
         "map": GAME["map"],
         "players": GAME["players"],
@@ -249,6 +268,9 @@ def public_state(reveal_names):
         "unlocked_packs": sorted(GAME["unlocked_packs"]),
         "phase_script": render_phase_script(),
     }
+    if reveal_names:
+        state["votes"] = GAME["votes"]
+    return state
 
 
 # sid -> the name that player typed in on /play, used to compute their
@@ -298,6 +320,14 @@ def push_whoami():
         socketio.emit("whoami_result", {"characters": whoami_for(name)}, room=sid)
 
 
+def push_my_votes():
+    """Privately tell each player their own locked-in vote (or none yet) -
+    never broadcast who voted for whom to anyone but the host."""
+    for sid, name in PLAYER_SIDS.items():
+        choice = GAME["votes"].get(name)
+        socketio.emit("my_vote_result", {"voted": choice is not None, "choice": choice}, room=sid)
+
+
 def push_phase_reminders():
     """Privately nudge each player whose character has an ability tagged
     for the phase that's currently active."""
@@ -318,6 +348,7 @@ def broadcast():
     socketio.emit("state", public_state(reveal_names=True), room="hosts")
     socketio.emit("state", public_state(reveal_names=False), room="players")
     push_whoami()
+    push_my_votes()
 
 
 # ---------------------------------------------------------------- routes ---
@@ -401,6 +432,8 @@ def on_register_player(data):
         PLAYER_SIDS.pop(request.sid, None)
     socketio.emit("state", public_state(reveal_names=False), room=request.sid)
     socketio.emit("whoami_result", {"characters": whoami_for(name)}, room=request.sid)
+    choice = GAME["votes"].get(name)
+    socketio.emit("my_vote_result", {"voted": choice is not None, "choice": choice}, room=request.sid)
     if name:
         broadcast()  # let the host's Players panel pick up the new arrival
 
@@ -448,7 +481,19 @@ def on_toggle_character(data):
     if not is_unlocked(cid):
         return  # character's pack isn't unlocked - ignore the toggle
     st = GAME["characters"][cid]
-    st["active"] = not st["active"]
+    activating = not st["active"]
+    if activating and GAME["roster_locked"]:
+        active_count = sum(1 for s in GAME["characters"].values() if s["active"])
+        player_count = len(GAME["players"])
+        if active_count >= player_count:
+            socketio.emit("character_limit_error", {
+                "message": f"Roster is locked with {player_count} player"
+                           f"{'s' if player_count != 1 else ''} - you already have "
+                           f"{active_count} characters active. Deactivate one first, "
+                           f"or unlock the roster to add more players."
+            }, room=request.sid)
+            return
+    st["active"] = activating
     if not st["active"]:
         st["last_action"] = None
     log_activity(f"{CHARACTERS_BY_ID[cid]['name']} {'activated' if st['active'] else 'deactivated'}")
@@ -577,6 +622,15 @@ def on_character_action(data):
 def on_start_game():
     GAME["roster_locked"] = True
     log_activity(f"Roster locked with {len(GAME['players'])} players")
+    active_count = sum(1 for s in GAME["characters"].values() if s["active"])
+    player_count = len(GAME["players"])
+    if active_count > player_count:
+        socketio.emit("character_limit_error", {
+            "message": f"Roster locked with {player_count} player"
+                       f"{'s' if player_count != 1 else ''}, but {active_count} "
+                       f"characters are active - deactivate {active_count - player_count} "
+                       f"to match, or Shuffle will fail."
+        }, room=request.sid)
     broadcast()
 
 
@@ -644,11 +698,15 @@ def on_get_my_card(data):
 
 @socketio.on("cast_vote")
 def on_cast_vote(data):
-    voter = data.get("voter", "").strip()
-    target_id = data.get("target_id")
-    if not voter or target_id not in GAME["characters"]:
+    voter = (data.get("voter") or "").strip()
+    target_name = (data.get("target_name") or "").strip()
+    if not voter or not target_name:
         return
-    GAME["votes"][voter] = target_id
+    if voter in GAME["votes"]:
+        return  # one vote only - first submission is final, no changing it
+    if target_name not in vote_candidates():
+        return  # not a valid candidate right now - ignore
+    GAME["votes"][voter] = target_name
     log_activity(f"{voter} voted")
     broadcast()
 
@@ -656,6 +714,46 @@ def on_cast_vote(data):
 @socketio.on("reset_votes")
 def on_reset_votes():
     GAME["votes"] = {}
+    broadcast()
+
+
+def _clear_player_from_characters(name):
+    norm = name.strip().lower()
+    for st in GAME["characters"].values():
+        if (st.get("player_name") or "").strip().lower() == norm:
+            st["player_name"] = ""
+
+
+@socketio.on("remove_player")
+def on_remove_player(data):
+    name = (data or {}).get("name", "")
+    before = len(GAME["players"])
+    GAME["players"] = [p for p in GAME["players"] if p["name"].strip().lower() != name.strip().lower()]
+    if len(GAME["players"]) != before:
+        _clear_player_from_characters(name)
+        log_activity(f"{name} removed from roster")
+        broadcast()
+
+
+@socketio.on("remove_all_players")
+def on_remove_all_players():
+    for p in GAME["players"]:
+        _clear_player_from_characters(p["name"])
+    GAME["players"] = []
+    log_activity("All players removed from roster")
+    broadcast()
+
+
+@socketio.on("add_player")
+def on_add_player(data):
+    name = (data or {}).get("name", "").strip()
+    if not name:
+        return
+    norm = name.lower()
+    if any(p["name"].strip().lower() == norm for p in GAME["players"]):
+        return  # already in the roster
+    GAME["players"].append({"name": name, "eliminated": False})
+    log_activity(f"{name} added to roster")
     broadcast()
 
 
@@ -672,16 +770,8 @@ def on_new_game():
     GAME["last_vote_winner"] = None
     GAME["round_events"] = {"rescued": [], "eliminated": []}
     GAME["round_history"] = {}
-    # Keep everyone who's currently connected in the roster so they don't
-    # have to re-type their name, but drop eliminated flags and reordering.
-    seen = set()
-    fresh_players = []
-    for name in PLAYER_SIDS.values():
-        norm = name.strip().lower()
-        if name and norm not in seen:
-            seen.add(norm)
-            fresh_players.append({"name": name.strip(), "eliminated": False})
-    GAME["players"] = fresh_players
+    # Player roster is left exactly as the host set it up via the New Game
+    # dialog (remove/add/remove-all) - no automatic repopulation here.
     log_activity("New game started")
     socketio.emit("game_reset", room="hosts")
     broadcast()

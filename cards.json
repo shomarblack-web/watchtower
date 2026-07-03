@@ -869,5 +869,25 @@
       "THNDRER ABILITY. Name. Description. (Phase!)"
     ],
     "strategy": "STRATEGY: Direction."
+  },
+  "white_martian_i": {
+    "signal": "SIGNAL - cross your arms",
+    "role": "TYPE - Martian (White)",
+    "abilities": [
+      "PASSIVE ABILITY. Shapeshifter. Player acts as Civilian/Bystander until Exposed!.",
+      "ACTIVE ABILITY. Telepathic Attack! Target one player. Target is eliminated. (Eliminate!).",
+      "SUPER ABILITY. Mind Merge. Player initiates an Eliminate! phase. Target one player. If target is Martian Manhunter, White Martian(s) win the game! (Discuss!)"
+    ],
+    "strategy": "STRATEGY. Eliminate Heroes/Civilians."
+  },
+  "white_martian_ii": {
+    "signal": "SIGNAL - cross your arms",
+    "role": "TYPE - Martian (White)",
+    "abilities": [
+      "PASSIVE ABILITY. Shapeshifter. Player acts as Civilian/Bystander until Exposed!.",
+      "ACTIVE ABILITY. Telepathic Attack! Target one player. Target is eliminated. (Eliminate!).",
+      "SUPER ABILITY. Mind Merge. Player initiates an Eliminate! phase. Target one player. If target is Martian Manhunter, White Martian(s) win the game! (Discuss!)"
+    ],
+    "strategy": "STRATEGY. Eliminate Heroes/Civilians."
   }
 }

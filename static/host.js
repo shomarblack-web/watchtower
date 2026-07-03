@@ -71,6 +71,13 @@ socket.on("shuffle_error", (data) => {
   setTimeout(() => { el.style.display = "none"; }, 5000);
 });
 
+socket.on("character_limit_error", (data) => {
+  const el = document.getElementById("host-toast");
+  el.textContent = data.message;
+  el.style.display = "block";
+  setTimeout(() => { el.style.display = "none"; }, 6000);
+});
+
 function renderPlayersPanel(state) {
   const listEl = document.getElementById("players-list");
   const startBtn = document.getElementById("start-btn");
@@ -81,11 +88,14 @@ function renderPlayersPanel(state) {
     listEl.innerHTML = `<div class="empty">Waiting for players to join…</div>`;
   } else {
     listEl.innerHTML = players.map((p, i) => `
-      <div class="player-row ${p.eliminated ? "eliminated" : ""}" title="${TOOLTIPS.playerRow}" onclick="socket.emit('toggle_player_eliminated', {name: ${JSON.stringify(p.name)}})">
+      <div class="player-row ${p.eliminated ? "eliminated" : ""}" title="${TOOLTIPS.playerRow}" data-idx="${i}">
         <span class="player-num">${i + 1}.</span>
         <span class="player-name">${p.name}</span>
       </div>
     `).join("");
+    listEl.querySelectorAll(".player-row").forEach((el, i) => {
+      el.addEventListener("click", () => socket.emit("toggle_player_eliminated", { name: players[i].name }));
+    });
   }
 
   if (state.roster_locked) {
@@ -102,6 +112,44 @@ function renderPlayersPanel(state) {
 function doShuffle() {
   socket.emit("shuffle_characters");
 }
+
+// ---- New Game player management ----
+function openNewGameModal() {
+  renderNewGamePlayerList(latestState);
+  document.getElementById("newgame-overlay").style.display = "flex";
+}
+function closeNewGameModal() {
+  document.getElementById("newgame-overlay").style.display = "none";
+}
+function renderNewGamePlayerList(state) {
+  const listEl = document.getElementById("newgame-player-list");
+  if (!listEl) return;
+  const players = (state && state.players) || [];
+  listEl.innerHTML = players.length
+    ? players.map(p => `
+        <div class="newgame-player-row">
+          <span>${p.name}</span>
+          <button class="newgame-remove-btn" title="Remove player">✕</button>
+        </div>
+      `).join("")
+    : `<div class="empty">No players in the roster.</div>`;
+  listEl.querySelectorAll(".newgame-remove-btn").forEach((el, i) => {
+    el.addEventListener("click", () => socket.emit("remove_player", { name: players[i].name }));
+  });
+}
+function addPlayerFromModal() {
+  const input = document.getElementById("newgame-add-input");
+  const name = input.value.trim();
+  if (!name) return;
+  socket.emit("add_player", { name });
+  input.value = "";
+}
+function confirmStartNewGame() {
+  if (!confirm("Start a brand new game? This resets the round, board, and packs.")) return;
+  socket.emit("new_game");
+  closeNewGameModal();
+}
+
 socket.on("disconnect", () => { document.getElementById("conn-status").textContent = "○ disconnected"; });
 
 // ---- build the round / phase status strips once ----
@@ -197,7 +245,7 @@ function buildCharRow(c) {
     const health = document.createElement("div");
     health.className = "stepper";
     health.innerHTML = `<button class="step-btn" data-d="-1" title="${TOOLTIPS.healthMinus}">–</button>
-                         <span class="step-val" data-role="health">❤️–</span>
+                         <span class="step-val" data-role="health">–❤️</span>
                          <button class="step-btn" data-d="1" title="${TOOLTIPS.healthPlus}">+</button>`;
     health.querySelectorAll(".step-btn").forEach(b => {
       b.onclick = () => socket.emit("adjust_health", { id: c.id, delta: Number(b.dataset.d) });
@@ -209,7 +257,7 @@ function buildCharRow(c) {
     const shield = document.createElement("div");
     shield.className = "stepper stepper-shield";
     shield.innerHTML = `<button class="step-btn" data-d="-1" title="${TOOLTIPS.shieldMinus}">–</button>
-                         <span class="step-val" data-role="shield">🛡</span>
+                         <span class="step-val" data-role="shield">–🛡</span>
                          <button class="step-btn" data-d="1" title="${TOOLTIPS.shieldPlus}">+</button>`;
     shield.querySelectorAll(".step-btn").forEach(b => {
       b.onclick = () => socket.emit("adjust_shield", { id: c.id, delta: Number(b.dataset.d) });
@@ -235,6 +283,11 @@ function buildCharRow(c) {
   right.style.gap = "4px";
   right.style.alignItems = "flex-end";
 
+  const protWrap = document.createElement("div");
+  protWrap.className = "prot-wrap";
+  const protLabel = document.createElement("div");
+  protLabel.className = "prot-label";
+  protLabel.textContent = "Protection";
   const prot = document.createElement("div");
   prot.className = "prot-row";
   for (let i = 0; i < 3; i++) {
@@ -245,20 +298,23 @@ function buildCharRow(c) {
     dot.onclick = () => socket.emit("toggle_protection", { id: c.id, slot: i });
     prot.appendChild(dot);
   }
+  protWrap.appendChild(protLabel);
+  protWrap.appendChild(prot);
 
   const actions = document.createElement("div");
   actions.className = "action-row";
+  const ACTION_LABELS = { end: "ELM" };
   c.actions.forEach(a => {
     const btn = document.createElement("button");
     btn.className = "action-btn" + (a === "deactivate" ? " deactivate" : "");
     btn.dataset.action = a;
-    btn.textContent = a;
+    btn.textContent = ACTION_LABELS[a] || a;
     btn.title = TOOLTIPS["action_" + a] || a;
     btn.onclick = () => socket.emit("character_action", { id: c.id, action: a });
     actions.appendChild(btn);
   });
 
-  right.appendChild(prot);
+  right.appendChild(protWrap);
   right.appendChild(actions);
 
   row.appendChild(toggle);
@@ -298,6 +354,9 @@ socket.on("state", (state) => {
   });
 
   renderPlayersPanel(state);
+  renderNewGamePlayerList(state);
+
+  const spotlightSet = new Set(state.spotlight_characters || []);
 
   CHARACTERS.forEach(c => {
     const st = state.characters[c.id];
@@ -306,18 +365,19 @@ socket.on("state", (state) => {
     const locked = !c.pack || !unlockedSet.has(c.pack);
     row.style.display = locked ? "none" : "";
     row.classList.toggle("active", st.active && !locked);
+    row.classList.toggle("spotlight", spotlightSet.has(c.id) && !locked);
     const nameInput = row.querySelector("input");
     if (document.activeElement !== nameInput) nameInput.value = st.player_name || "";
 
     const healthVal = row.querySelector('[data-role="health"]');
     if (healthVal) {
-      healthVal.textContent = `❤️${st.health}`;
+      healthVal.textContent = `${st.health}❤️`;
       healthVal.classList.toggle("zero", st.health === 0);
       healthVal.classList.toggle("max", st.health >= 4);
     }
     const shieldVal = row.querySelector('[data-role="shield"]');
     if (shieldVal) {
-      shieldVal.textContent = `🛡${st.shield}`;
+      shieldVal.textContent = `${st.shield}🛡`;
       shieldVal.classList.toggle("zero", st.shield === 0);
     }
     row.querySelectorAll(".special-btn").forEach(b => {
@@ -350,13 +410,11 @@ socket.on("state", (state) => {
 
   const tallyEl = document.getElementById("tally");
   const voteCountEl = document.getElementById("vote-count");
-  const totalVotes = Object.keys(state.votes).length;
-  voteCountEl.textContent = totalVotes ? `(${totalVotes} cast)` : "";
+  voteCountEl.textContent = state.vote_count ? `(${state.vote_count} cast)` : "";
   if (!state.tally.length) {
     tallyEl.innerHTML = `<div class="empty">No votes cast this phase.</div>`;
   } else {
-    tallyEl.innerHTML = state.tally.map(([id, count]) => {
-      const name = (CHARACTERS.find(c => c.id === id) || {}).name || id;
+    tallyEl.innerHTML = state.tally.map(([name, count]) => {
       return `<div class="tally-row"><span>${name}</span><b>${count}</b></div>`;
     }).join("");
   }
