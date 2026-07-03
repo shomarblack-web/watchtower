@@ -1,4 +1,13 @@
 const socket = io();
+
+// ---- animated overlay show/hide (fade + scale, see .map-overlay CSS) ----
+function showOverlay(id) {
+  document.getElementById(id).classList.add("overlay-open");
+}
+function hideOverlay(id) {
+  document.getElementById(id).classList.remove("overlay-open");
+}
+
 let myName = localStorage.getItem("watchtower_name") || "";
 let myVote = null;
 let latestState = null;
@@ -45,22 +54,22 @@ function renderWhoAmI(characters) {
 // ---- shuffle reveal ----
 socket.on("shuffle_reveal", (data) => {
   document.getElementById("reveal-name").textContent = data.character;
-  document.getElementById("shuffle-overlay").style.display = "flex";
+  showOverlay("shuffle-overlay");
 });
 
 function closeReveal() {
-  document.getElementById("shuffle-overlay").style.display = "none";
+  hideOverlay("shuffle-overlay");
 }
 
 // ---- super ability unlocked (Round 3+) ----
 socket.on("super_ability_unlocked", (data) => {
   document.getElementById("super-character-name").textContent = data.character;
   document.getElementById("super-ability-text").textContent = data.ability;
-  document.getElementById("super-overlay").style.display = "flex";
+  showOverlay("super-overlay");
 });
 
 function closeSuperOverlay() {
-  document.getElementById("super-overlay").style.display = "none";
+  hideOverlay("super-overlay");
 }
 
 // ---- conditions (Exposed / Eliminated / Rescued / Targeted) ----
@@ -81,11 +90,22 @@ function renderConditionOverlay(conditions) {
       <div style="font-size:14px; color:var(--text); margin:8px 0 14px; line-height:1.5">${c.body}</div>
     </div>
   `).join("");
-  document.getElementById("condition-overlay").style.display = "flex";
+  showOverlay("condition-overlay");
 }
 
 function closeConditionOverlay() {
-  document.getElementById("condition-overlay").style.display = "none";
+  hideOverlay("condition-overlay");
+}
+
+// ---- game over ----
+socket.on("game_over", (data) => {
+  document.getElementById("gameover-title").textContent = data.title;
+  document.getElementById("gameover-message").textContent = data.message;
+  showOverlay("gameover-overlay");
+});
+
+function closeGameOver() {
+  hideOverlay("gameover-overlay");
 }
 
 // ---- my card ----
@@ -119,10 +139,10 @@ socket.on("my_card_result", (data) => {
 
 function openMyCard() {
   socket.emit("get_my_card", { name: myName });
-  document.getElementById("mycard-overlay").style.display = "flex";
+  showOverlay("mycard-overlay");
 }
 function closeMyCard() {
-  document.getElementById("mycard-overlay").style.display = "none";
+  hideOverlay("mycard-overlay");
 }
 
 // ---- rules & phases ----
@@ -134,10 +154,10 @@ function openRules() {
       <div class="ability-desc">${PHASE_INFO[p] || ""}</div>
     </div>
   `).join("");
-  document.getElementById("rules-overlay").style.display = "flex";
+  showOverlay("rules-overlay");
 }
 function closeRules() {
-  document.getElementById("rules-overlay").style.display = "none";
+  hideOverlay("rules-overlay");
 }
 
 // ---- phase reminder toast ----

@@ -53,7 +53,7 @@
   </div>
 </div>
 
-<div id="shuffle-overlay" class="map-overlay" style="display:none">
+<div id="shuffle-overlay" class="map-overlay">
   <div class="reveal-modal kirby-frame">
     <div class="kirby-inner">
       <div class="reveal-label">You are</div>
@@ -66,7 +66,7 @@
   </div>
 </div>
 
-<div id="super-overlay" class="map-overlay" style="display:none">
+<div id="super-overlay" class="map-overlay">
   <div class="reveal-modal kirby-frame">
     <div class="kirby-inner">
       <div class="reveal-label">⭐ Super Ability Active</div>
@@ -79,7 +79,7 @@
   </div>
 </div>
 
-<div id="condition-overlay" class="map-overlay" style="display:none">
+<div id="condition-overlay" class="map-overlay">
   <div class="reveal-modal kirby-frame">
     <div class="kirby-inner">
       <div id="condition-list-body"></div>
@@ -90,7 +90,20 @@
   </div>
 </div>
 
-<div id="mycard-overlay" class="map-overlay" style="display:none" onclick="if(event.target===this) closeMyCard()">
+<div id="gameover-overlay" class="map-overlay">
+  <div class="reveal-modal kirby-frame">
+    <div class="kirby-inner">
+      <div class="reveal-label">GAME OVER</div>
+      <div class="reveal-name" id="gameover-title" style="font-size:34px">—</div>
+      <div id="gameover-message" style="font-size:15px; color:var(--text); margin:14px 0; line-height:1.5"></div>
+      <div class="reveal-buttons">
+        <button class="btn-ghost" onclick="closeGameOver()">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="mycard-overlay" class="map-overlay" onclick="if(event.target===this) closeMyCard()">
   <div class="card-modal kirby-frame">
     <div class="kirby-inner">
       <div class="map-modal-head">
@@ -102,7 +115,7 @@
   </div>
 </div>
 
-<div id="rules-overlay" class="map-overlay" style="display:none" onclick="if(event.target===this) closeRules()">
+<div id="rules-overlay" class="map-overlay" onclick="if(event.target===this) closeRules()">
   <div class="card-modal kirby-frame">
     <div class="kirby-inner">
       <div class="map-modal-head">

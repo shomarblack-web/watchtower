@@ -6,7 +6,7 @@
 <title>Watchtower — Host Console</title>
 <link rel="stylesheet" href="/static/style.css">
 </head>
-<body>
+<body class="host-page">
 
 <div id="host-toast" class="host-toast" style="display:none"></div>
 
@@ -16,6 +16,12 @@
     <button class="btn-primary" style="margin:0" onclick="resolveHostageRelease()">✅ Revealed — Release</button>
     <button class="btn-ghost" style="margin:0" onclick="resolveHostageConsequence()">❌ Time's Up — Lose 1 HP</button>
   </div>
+</div>
+
+<div id="gameover-banner" class="gameover-banner" style="display:none">
+  <div id="gameover-banner-title"></div>
+  <div id="gameover-banner-message"></div>
+  <button class="btn-primary" style="margin-top:8px" onclick="if(confirm('Start a brand new game?')) socket.emit('new_game')">Start New Game</button>
 </div>
 
 <div class="topbar">
@@ -81,7 +87,7 @@
   </div>
 </div>
 
-<div id="newgame-overlay" class="map-overlay" style="display:none" onclick="if(event.target===this) closeNewGameModal()">
+<div id="newgame-overlay" class="map-overlay" onclick="if(event.target===this) closeNewGameModal()">
   <div class="card-modal">
     <div class="map-modal-head">
       <h3 style="margin:0">Start New Game</h3>
@@ -104,7 +110,7 @@
   </div>
 </div>
 
-<div id="map-overlay" class="map-overlay" style="display:none">
+<div id="map-overlay" class="map-overlay">
   <div class="map-modal">
     <div class="map-modal-head">
       <h3 style="margin:0">The DC Universe</h3>
@@ -114,7 +120,7 @@
   </div>
 </div>
 
-<div id="card-overlay" class="map-overlay" style="display:none" onclick="if(event.target===this) closeCard()">
+<div id="card-overlay" class="map-overlay" onclick="if(event.target===this) closeCard()">
   <div class="card-modal">
     <div class="map-modal-head">
       <h3 style="margin:0" id="card-name">—</h3>
@@ -124,7 +130,7 @@
   </div>
 </div>
 
-<div id="timer-overlay" class="map-overlay" style="display:none">
+<div id="timer-overlay" class="map-overlay">
   <div class="timer-modal">
     <div class="map-modal-head">
       <h3 style="margin:0" id="timer-title">Discuss!</h3>
@@ -139,7 +145,7 @@
   </div>
 </div>
 
-<div id="prompts-overlay" class="map-overlay" style="display:none" onclick="if(event.target===this) closePrompts()">
+<div id="prompts-overlay" class="map-overlay" onclick="if(event.target===this) closePrompts()">
   <div class="card-modal">
     <div class="map-modal-head">
       <h3 style="margin:0">Prompts — Talk Like a Hero</h3>
@@ -149,7 +155,7 @@
   </div>
 </div>
 
-<div id="hostage-overlay" class="map-overlay" style="display:none" onclick="if(event.target===this) closeHostageModal()">
+<div id="hostage-overlay" class="map-overlay" onclick="if(event.target===this) closeHostageModal()">
   <div class="card-modal hostage-modal">
     <div class="map-modal-head">
       <h3 style="margin:0" id="hostage-modal-title">Take Hostage</h3>
@@ -165,7 +171,7 @@
   </div>
 </div>
 
-<div id="phase-script-overlay" class="map-overlay" style="display:none" onclick="if(event.target===this) closePhaseScript()">
+<div id="phase-script-overlay" class="map-overlay" onclick="if(event.target===this) closePhaseScript()">
   <div class="card-modal phase-script-modal">
     <div class="map-modal-head">
       <h3 style="margin:0" id="phase-script-title">Phase</h3>

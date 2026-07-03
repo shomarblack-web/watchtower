@@ -1,4 +1,13 @@
 const socket = io();
+
+// ---- animated overlay show/hide (fade + scale, see .map-overlay CSS) ----
+function showOverlay(id) {
+  document.getElementById(id).classList.add("overlay-open");
+}
+function hideOverlay(id) {
+  document.getElementById(id).classList.remove("overlay-open");
+}
+
 let latestState = null;
 const collapsedTeams = new Set(["martian", "hero", "villain", "civilian", "sidekick", "bystander"]);
 const PACK_LABELS = Object.fromEntries(PACKS.map(p => [p.id, p.label]));
@@ -78,6 +87,12 @@ socket.on("character_limit_error", (data) => {
   setTimeout(() => { el.style.display = "none"; }, 6000);
 });
 
+socket.on("game_over", (data) => {
+  document.getElementById("gameover-banner-title").textContent = data.title;
+  document.getElementById("gameover-banner-message").textContent = data.message;
+  document.getElementById("gameover-banner").style.display = "flex";
+});
+
 function renderPlayersPanel(state) {
   const listEl = document.getElementById("players-list");
   const startBtn = document.getElementById("start-btn");
@@ -116,10 +131,10 @@ function doShuffle() {
 // ---- New Game player management ----
 function openNewGameModal() {
   renderNewGamePlayerList(latestState);
-  document.getElementById("newgame-overlay").style.display = "flex";
+  showOverlay("newgame-overlay");
 }
 function closeNewGameModal() {
-  document.getElementById("newgame-overlay").style.display = "none";
+  hideOverlay("newgame-overlay");
 }
 function renderNewGamePlayerList(state) {
   const listEl = document.getElementById("newgame-player-list");
@@ -374,6 +389,11 @@ socket.on("state", (state) => {
 
   renderPlayersPanel(state);
   renderHostageBanner(state);
+  if (state.game_over) {
+    document.getElementById("gameover-banner-title").textContent = state.game_over.title;
+    document.getElementById("gameover-banner-message").textContent = state.game_over.message;
+    document.getElementById("gameover-banner").style.display = "flex";
+  }
   renderNewGamePlayerList(state);
 
   const spotlightSet = new Set(state.spotlight_characters || []);
@@ -385,7 +405,7 @@ socket.on("state", (state) => {
     const row = document.getElementById(`row-${c.id}`);
     if (!row || !st) return;
     const locked = !c.pack || !unlockedSet.has(c.pack);
-    row.style.display = locked ? "none" : "";
+    row.classList.toggle("row-hidden", locked);
     row.classList.toggle("active", st.active && !locked);
     row.classList.toggle("spotlight", spotlightSet.has(c.id) && !locked);
     const nameInput = row.querySelector("input");
@@ -501,7 +521,7 @@ socket.on("state", (state) => {
     const wrap = document.querySelector(`.team[data-team="${team}"]`);
     if (!wrap) return;
     const body = wrap.querySelector(".team-body");
-    const visibleRows = Array.from(body.querySelectorAll(".char-row")).filter(r => r.style.display !== "none");
+    const visibleRows = Array.from(body.querySelectorAll(".char-row")).filter(r => !r.classList.contains("row-hidden"));
     wrap.querySelector(".team-count").textContent = visibleRows.length;
     let placeholder = body.querySelector(".team-empty-note");
     if (visibleRows.length === 0) {
@@ -539,8 +559,8 @@ socket.on("state", (state) => {
 // ---- DCEU map ----
 function toggleMap() {
   const overlay = document.getElementById("map-overlay");
-  const showing = overlay.style.display === "none";
-  overlay.style.display = showing ? "flex" : "none";
+  const showing = !overlay.classList.contains("overlay-open");
+  if (showing) showOverlay("map-overlay"); else hideOverlay("map-overlay");
   document.getElementById("map-toggle-btn").textContent = showing ? "Close map" : "Open map";
 }
 
@@ -625,11 +645,11 @@ function openCard(id) {
     `;
   }
 
-  document.getElementById("card-overlay").style.display = "flex";
+  showOverlay("card-overlay");
 }
 
 function closeCard() {
-  document.getElementById("card-overlay").style.display = "none";
+  hideOverlay("card-overlay");
 }
 
 // ---- hostage modal ----
@@ -664,11 +684,11 @@ function openHostageModal(holderId) {
   }
 
   renderHostageTargets();
-  document.getElementById("hostage-overlay").style.display = "flex";
+  showOverlay("hostage-overlay");
 }
 
 function closeHostageModal() {
-  document.getElementById("hostage-overlay").style.display = "none";
+  hideOverlay("hostage-overlay");
 }
 
 function flipCoin() {
@@ -759,7 +779,7 @@ function openTimer(startSeconds, label) {
   timerBeeped = false;
   document.getElementById("timer-title").textContent = label || "Discuss!";
   renderTimer();
-  document.getElementById("timer-overlay").style.display = "flex";
+  showOverlay("timer-overlay");
   startTimerInterval();
 }
 
@@ -811,7 +831,7 @@ function adjustTimer(deltaSeconds) {
 function closeTimer() {
   clearInterval(timerHandle);
   timerRunning = false;
-  document.getElementById("timer-overlay").style.display = "none";
+  hideOverlay("timer-overlay");
 }
 
 function beep() {
@@ -843,16 +863,16 @@ function openPrompts() {
       <div class="ability-desc prompt-quote">&ldquo;${p.text}&rdquo;</div>
     </div>
   `).join("");
-  document.getElementById("prompts-overlay").style.display = "flex";
+  showOverlay("prompts-overlay");
 }
 function closePrompts() {
-  document.getElementById("prompts-overlay").style.display = "none";
+  hideOverlay("prompts-overlay");
 }
 
 // ---- phase script popup (what Watchtower says aloud) ----
 function openPhaseScript(script) {
   renderPhaseScriptBody(script);
-  document.getElementById("phase-script-overlay").style.display = "flex";
+  showOverlay("phase-script-overlay");
 }
 
 function renderPhaseScriptBody(script) {
@@ -868,5 +888,5 @@ function renderPhaseScriptBody(script) {
 }
 
 function closePhaseScript() {
-  document.getElementById("phase-script-overlay").style.display = "none";
+  hideOverlay("phase-script-overlay");
 }

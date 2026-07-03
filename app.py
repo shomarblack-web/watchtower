@@ -141,6 +141,7 @@ GAME = {
     "round_history": {},             # round_number -> {"rescued":[ids],"eliminated":[ids]}
     "super_abilities_announced": False,
     "hostage_event": None,
+    "game_over": None,
 }
 
 
@@ -388,6 +389,7 @@ def public_state(reveal_names):
         "super_active_characters": super_active_characters(),
         "draft_characters": draft_characters(),
         "hostage_event": GAME["hostage_event"],
+        "game_over": GAME["game_over"],
         "activity": GAME["activity"],
         "map": GAME["map"],
         "players": GAME["players"],
@@ -479,6 +481,26 @@ def push_condition_recap():
             socketio.emit("condition_recap", {
                 "conditions": [{"title": c["title"], "body": c["body"]} for c in active]
             }, room=sid)
+
+
+def check_win_condition():
+    """Heroes win the moment every currently-active Hero has been Rescued
+    (reached Watchtower). Only fires once per game."""
+    if GAME["game_over"]:
+        return
+    heroes = [
+        cid for cid, st in GAME["characters"].items()
+        if st["active"] and CHARACTERS_BY_ID.get(cid, {}).get("team") == "hero"
+    ]
+    if heroes and all(GAME["characters"][cid]["rescued"] for cid in heroes):
+        GAME["game_over"] = {
+            "winner": "Heroes",
+            "title": "HEROES WIN!",
+            "message": "All Heroes have safely reached Watchtower.",
+        }
+        log_activity("GAME OVER \u2014 Heroes win! All Heroes reached Watchtower.")
+        socketio.emit("game_over", GAME["game_over"], room="hosts")
+        socketio.emit("game_over", GAME["game_over"], room="players")
 
 
 def push_phase_reminders():
@@ -940,6 +962,7 @@ def on_character_action(data):
             if st[cond["flag"]]:
                 push_condition_alert(cid, cond["title"], cond["body"])
     broadcast()
+    check_win_condition()
 
 
 @socketio.on("start_game")
@@ -1103,6 +1126,7 @@ def on_new_game():
     GAME["round_history"] = {}
     GAME["super_abilities_announced"] = False
     GAME["hostage_event"] = None
+    GAME["game_over"] = None
     # Player roster is left exactly as the host set it up via the New Game
     # dialog (remove/add/remove-all) - no automatic repopulation here.
     log_activity("New game started")

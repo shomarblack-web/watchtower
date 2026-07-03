@@ -132,6 +132,46 @@ This version stores the roster as **data**, not code:
   name at once, matching the original's behavior (several coordinates
   intentionally point to the same location).
 
+## New: Win Condition — Heroes reach Watchtower
+
+Confirmed Round 3 was correct — no change there. The moment every currently
+active Hero has the Rescued condition, the game announces "HEROES WIN! All
+Heroes have safely reached Watchtower" to the host and every player at
+once, in a dramatic full-screen pop-up (players) and a persistent banner
+with a one-click "Start New Game" button (host). Tested live: one hero
+rescued doesn't trigger it, adding the second one does, and it correctly
+never fires twice in the same game.
+
+This is deliberately the *only* win/lose condition I built. The rules doc
+also mentions a wrong-accusation loss condition and others — I only built
+what you explicitly asked for here (all Heroes → Watchtower); let me know
+if you want the others enforced too.
+
+## New: animations throughout
+
+- **Every modal now fades and scales in/out** instead of popping instantly
+  — Prompts, the DCEU map, character cards, the hostage picker, phase
+  scripts, the New Game dialog, all of it.
+- **Locked characters slide/collapse away** when their pack isn't
+  unlocked, instead of vanishing instantly — same for whole team sections
+  when you collapse them.
+- **Badges pop in** with a little bounce when a condition, Reveal, Draft,
+  or Hostage status first appears on a row.
+- **Toasts and banners slide down** from the top instead of snapping into
+  place.
+
+## New: vibrant host console
+
+Gave the host console its own color identity without touching the
+player side's Kirby look: a subtle cosmic gradient wash (purple, magenta,
+amber) behind the whole page, a gradient-text brand title, gradient
+buttons, a colored underline accent on every panel header, and each of
+the 8 phase LEDs now has its own distinct idle color instead of uniform
+gray. Kept it subtle enough that the roster (which has a lot of
+information packed into it) stays easy to read — this wasn't a full
+reskin, just enough color energy to feel like the same game as the player
+side rather than a bare control panel.
+
 ## New: player-facing Conditions (Exposed / Eliminated / Rescued / Targeted)
 
 Pressing the associated action button now does two things: it toggles a
@@ -155,26 +195,16 @@ Clicking Deactivate clears all of a character's conditions along with
 taking them off the board. These flags are purely informational/alerting
 for now — see below for what I deliberately didn't build yet.
 
-**Two things I need from you before going further:**
+**Resolved:** Round 3 confirmed correct (see the new Win Condition section
+below), and the "all Heroes reach Watchtower" win condition is now built.
 
-1. **Round 3 vs Round 4 conflict.** You earlier told me Super Abilities
-   activate at Round 3, and I built exactly that. This new rules doc says
-   "A Super Ability may only be used after the start of Round 4." I have
-   not changed anything — the app still uses Round 3 — since I didn't want
-   to silently override a prior explicit instruction. Which one is
-   correct?
-2. **Scope of enforcement.** This rules doc describes a lot more than the
-   four conditions — real limits (Active Ability once per round, Super
-   Ability once per game total), exemptions (Passive/Active use never
-   causes Expose), team-specific asymmetries (a Rescued Villain only loses
-   their Active Ability, not Passive/Super; an Exposed Martian has no
-   penalty at all), and even a win condition (a Hero's wrong accusation
-   means the Martians win outright). I've only built the four conditions
-   and their alerts so far — I have not built any of the ability-use
-   limits, the exemptions, or the win-condition logic, since that's a much
-   larger scope than "add pop-ups" and deserves its own explicit go-ahead.
-   Want me to build that out next, or keep working through card
-   corrections first?
+**Still open:** the rest of the rules doc's enforcement — Active Ability
+once per round, Super Ability once per game total, the exemptions
+(Passive/Active use never causes Expose), team-specific asymmetries (a
+Rescued Villain only loses their Active Ability, not Passive/Super; an
+Exposed Martian has no penalty), and the wrong-accusation loss condition.
+None of that is built yet — just the four conditions, their alerts, and
+the one win condition. Say the word whenever you want it.
 
 ## New: full Hostage mechanic (real-world reveal-to-save)
 
