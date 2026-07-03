@@ -32,7 +32,8 @@ from flask_socketio import SocketIO, join_room
 from characters import (
     CHARACTERS, CHARACTERS_BY_ID, TEAM_LABELS, TEAM_COLORS, PHASES, NUM_ROUNDS,
     MAX_HEALTH, SHIELD_START, COLUMN_COLORS, DCEU_GRID, DCEU_LOCATIONS, PHASE_INFO,
-    NARRATION_PROMPTS, INTRO_SCRIPT, PACKS, PACK_LABELS,
+    NARRATION_PROMPTS, INTRO_SCRIPT, PACKS, PACK_LABELS, SWITCH_CHARACTERS,
+    HOSTAGE_CHARACTERS,
 )
 
 CARDS = json.loads((Path(__file__).parent / "cards.json").read_text())
@@ -40,7 +41,7 @@ CARDS = json.loads((Path(__file__).parent / "cards.json").read_text())
 # Pull the trailing "(Protect!)" / "(Accuse!)" style tag off each ability's
 # text so we can remind a player of their move when that phase comes up.
 # e.g. "...may shield another player (Protect!)" -> tagged under "Protect".
-_PHASE_TAG_RE = re.compile(r"\(([A-Za-z]+)!\)")
+_PHASE_TAG_RE = re.compile(r"[/(]([A-Za-z]+)!\)")
 PHASE_SET_LOWER = {p.lower() for p in PHASES}
 
 ABILITY_PHASE_MAP = {}  # cid -> {phase_name: [ability_text, ...]}
@@ -59,16 +60,21 @@ socketio = SocketIO(app, cors_allowed_origins="*")
 def fresh_character_state():
     state = {}
     for c in CHARACTERS:
+        # Switchable characters with a shield don't get it until revealed -
+        # their card ties the shield to a Hero-only ability.
+        shield_locked_pending_reveal = c["is_switchable"] and c["has_shield"]
         state[c["id"]] = {
             "active": False,
             "player_name": "",
             "health": c["start_health"] if c["has_health"] else None,
             "protection": [False, False, False],
             "last_action": None,     # e.g. "Watchtower", "Exposed", "Deactivated"
-            "shield": SHIELD_START if c["has_shield"] else None,
+            "shield": None if shield_locked_pending_reveal else (SHIELD_START if c["has_shield"] else None),
             "cuffed": False if c["has_cuffs"] else None,
             "cured": False if c["has_cure"] else None,
             "fixed": False if c["has_fixit"] else None,
+            "revealed": False if c["is_switchable"] else None,
+            "hostage": False,
         }
     return state
 
@@ -92,6 +98,7 @@ GAME = {
     "last_vote_winner": None,        # character id, captured when Vote phase ends
     "round_events": {"rescued": [], "eliminated": []},  # this round, so far
     "round_history": {},             # round_number -> {"rescued":[ids],"eliminated":[ids]}
+    "super_abilities_announced": False,
 }
 
 
@@ -100,6 +107,36 @@ def is_unlocked(character_id):
     if pack is None:
         return False
     return pack in GAME["unlocked_packs"]
+
+
+def display_name_for(cid):
+    """The character's currently-showing name - their secret identity once
+    revealed, their ordinary civilian name until then."""
+    c = CHARACTERS_BY_ID.get(cid)
+    if not c:
+        return cid
+    if c["is_switchable"]:
+        st = GAME["characters"].get(cid, {})
+        if st.get("revealed"):
+            return c["reveal_name"]
+    return c["name"]
+
+
+_ABILITY_TYPE_RE = re.compile(r"type:?\s*(civilian|hero|villain)", re.IGNORECASE)
+
+
+def _ability_visible_to_player(ability_text, revealed):
+    """Card text for switch characters tags each ability with which state
+    it belongs to (e.g. "*Type: Civilian only", "**Type: Hero only"). An
+    ability with no such tag applies either way. Only used for the
+    player-facing My Card view - the host always sees everything."""
+    m = _ABILITY_TYPE_RE.search(ability_text)
+    if not m:
+        return True
+    tag = m.group(1).lower()
+    if tag == "civilian":
+        return not revealed
+    return revealed  # hero or villain tag = only visible after reveal
 
 
 def log_activity(text):
@@ -141,6 +178,49 @@ def spotlight_characters():
     ]
 
 
+_PLACEHOLDER_ABILITY_RE = re.compile(r"Name\.\s*Description\.\s*\(Phase!\)", re.IGNORECASE)
+_CORRUPTED_SUPER_RE = re.compile(r"\bER ABILITY\.", re.IGNORECASE)  # e.g. "SMPTHINGER ABILITY" - a "SUPER" typo
+
+
+def has_draft_content(cid):
+    """True if this character's card still has unfinished placeholder text
+    left over from the original file (a generic 'Name. Description.
+    (Phase!)' stand-in, or the 'SUPER' typo that left prefixes like
+    'SMPTHINGER ABILITY' instead of 'SUPER ABILITY')."""
+    for a in CARDS.get(cid, {}).get("abilities", []):
+        if _PLACEHOLDER_ABILITY_RE.search(a) or _CORRUPTED_SUPER_RE.search(a):
+            return True
+    return False
+
+
+def draft_characters():
+    """All character ids whose card still has unfinished content, regardless
+    of whether they're currently active - a host-facing reminder of what
+    still needs real writing."""
+    return [cid for cid in CHARACTERS_BY_ID if has_draft_content(cid)]
+
+
+def real_super_ability(cid):
+    """This character's Super Ability text, or None if they don't have one
+    or it's still the unfinished 'Name. Description. (Phase!)' placeholder
+    left over in the original file."""
+    for a in CARDS.get(cid, {}).get("abilities", []):
+        if "SUPER ABILITY" in a.upper() and not _PLACEHOLDER_ABILITY_RE.search(a):
+            return a
+    return None
+
+
+def super_active_characters():
+    """Active character ids with a real Super Ability, once Round 3 or
+    later - Super Abilities don't switch on until then."""
+    if GAME["round"] < 3:
+        return []
+    return [
+        cid for cid, st in GAME["characters"].items()
+        if st["active"] and real_super_ability(cid)
+    ]
+
+
 def _join_names(names):
     """'A' / 'A and B' / 'A, B, and C' - falls back to 'no one' when empty."""
     names = [n for n in names if n]
@@ -155,7 +235,7 @@ def _join_names(names):
 
 def _active_names_by_team(team):
     return [
-        CHARACTERS_BY_ID[cid]["name"]
+        display_name_for(cid)
         for cid, st in GAME["characters"].items()
         if st["active"] and CHARACTERS_BY_ID.get(cid, {}).get("team") == team
     ]
@@ -182,15 +262,16 @@ def render_phase_script():
                 1 for cid, st in GAME["characters"].items()
                 if st["active"] and CHARACTERS_BY_ID.get(cid, {}).get("team") == "martian"
             )
+            martian_label = "White Martian" if martian_count == 1 else "White Martians"
             text = (
                 f"...I'm sending {heroes} to the Martian Prison to rescue {civilians}. "
                 f"You're surprised to find {villains} in the prison as well. "
-                f"Scanners indicate at least {martian_count} among you."
+                f"Scanners indicate at least {martian_count} {martian_label} among you."
             )
             return {"phase": "Report", "kind": "briefing", "lines": [text]}
         else:
-            rescued = [CHARACTERS_BY_ID[c]["name"] for c in history["rescued"] if c in CHARACTERS_BY_ID]
-            eliminated = [CHARACTERS_BY_ID[c]["name"] for c in history["eliminated"] if c in CHARACTERS_BY_ID]
+            rescued = [display_name_for(c) for c in history["rescued"] if c in CHARACTERS_BY_ID]
+            eliminated = [display_name_for(c) for c in history["eliminated"] if c in CHARACTERS_BY_ID]
             rescued_clause = (
                 f"I safely beamed {_join_names(rescued)} up to Watchtower."
                 if rescued else "No one made it to Watchtower last round."
@@ -249,6 +330,7 @@ def public_state(reveal_names):
         c = dict(st)
         if not reveal_names:
             c["player_name"] = ""
+        c["display_name"] = display_name_for(cid)
         characters[cid] = c
     current_phase = PHASES[GAME["phase_index"]] if GAME["phase_index"] is not None else None
     state = {
@@ -261,6 +343,8 @@ def public_state(reveal_names):
         "vote_count": len(GAME["votes"]),
         "vote_candidates": vote_candidates() if current_phase == "Vote" else [],
         "spotlight_characters": spotlight_characters(),
+        "super_active_characters": super_active_characters(),
+        "draft_characters": draft_characters(),
         "activity": GAME["activity"],
         "map": GAME["map"],
         "players": GAME["players"],
@@ -288,7 +372,7 @@ def whoami_for(name):
     for cid, st in GAME["characters"].items():
         pname = (st.get("player_name") or "").strip().lower()
         if pname and pname == target:
-            matches.append(CHARACTERS_BY_ID[cid]["name"])
+            matches.append(display_name_for(cid))
     return matches
 
 
@@ -454,6 +538,22 @@ def on_set_round(data):
         GAME["round_events"] = {"rescued": [], "eliminated": []}
     GAME["round"] = new_round
     log_activity(f"Round set to {GAME['round']}")
+
+    if new_round >= 3 and not GAME["super_abilities_announced"]:
+        GAME["super_abilities_announced"] = True
+        log_activity("Super Abilities are now active!")
+        for cid in super_active_characters():
+            ability = real_super_ability(cid)
+            pname = (GAME["characters"][cid].get("player_name") or "").strip().lower()
+            if not pname:
+                continue
+            for sid, name in PLAYER_SIDS.items():
+                if name.strip().lower() == pname:
+                    socketio.emit("super_ability_unlocked", {
+                        "character": display_name_for(cid),
+                        "ability": ability,
+                    }, room=sid)
+
     broadcast()
 
 
@@ -471,6 +571,18 @@ def on_set_phase(data):
             GAME["votes"] = {}
     broadcast()
     push_phase_reminders()
+
+
+@socketio.on("clear_all_characters")
+def on_clear_all_characters():
+    count = 0
+    for cid, st in GAME["characters"].items():
+        if st["active"]:
+            st["active"] = False
+            st["last_action"] = None
+            count += 1
+    log_activity(f"Cleared all {count} active characters")
+    broadcast()
 
 
 @socketio.on("toggle_character")
@@ -576,6 +688,78 @@ def on_toggle_special(data):
     broadcast()
 
 
+@socketio.on("reveal_character")
+def on_reveal_character(data):
+    """Flip a switch character (Mary Batson -> Mary Marvel, etc.) between
+    their civilian disguise and their secret identity. Unlocks their
+    shield the first time they're revealed, if their card has one."""
+    cid = data.get("id")
+    char = CHARACTERS_BY_ID.get(cid)
+    st = GAME["characters"].get(cid)
+    if not char or not st or not char.get("is_switchable"):
+        return
+    st["revealed"] = not st["revealed"]
+    if st["revealed"] and char["has_shield"] and st["shield"] is None:
+        st["shield"] = SHIELD_START
+    civilian_name, secret_name = char["name"], char["reveal_name"]
+    if st["revealed"]:
+        log_activity(f"{civilian_name} revealed as {secret_name}!")
+    else:
+        log_activity(f"{secret_name} concealed again as {civilian_name}")
+    broadcast()
+    # Privately tell whoever is playing this character - same pop-up
+    # treatment as the initial shuffle reveal.
+    pname = (st.get("player_name") or "").strip().lower()
+    if pname:
+        for sid, name in PLAYER_SIDS.items():
+            if name.strip().lower() == pname:
+                socketio.emit("shuffle_reveal", {
+                    "character": display_name_for(cid), "id": cid,
+                }, room=sid)
+
+
+@socketio.on("take_hostage")
+def on_take_hostage(data):
+    """Two-Face's 'Let Fate Decide': target two active characters, marking
+    them hostage. Only usable once Harvey Dent has been revealed."""
+    holder_id = data.get("holder_id")
+    target_ids = data.get("target_ids") or []
+    holder = CHARACTERS_BY_ID.get(holder_id)
+    holder_st = GAME["characters"].get(holder_id)
+    if not holder or not holder_st or not holder.get("has_hostage"):
+        return
+    if not holder_st.get("revealed"):
+        socketio.emit("character_limit_error", {
+            "message": f"{holder['name']} must be revealed before taking hostages."
+        }, room=request.sid)
+        return
+    target_ids = [t for t in dict.fromkeys(target_ids) if t != holder_id]
+    if len(target_ids) != 2 or any(
+        t not in GAME["characters"] or not GAME["characters"][t]["active"] for t in target_ids
+    ):
+        socketio.emit("character_limit_error", {
+            "message": "Pick exactly two active characters to take hostage."
+        }, room=request.sid)
+        return
+    names = []
+    for t in target_ids:
+        GAME["characters"][t]["hostage"] = True
+        names.append(display_name_for(t))
+    log_activity(f"{display_name_for(holder_id)} takes {names[0]} and {names[1]} hostage!")
+    broadcast()
+
+
+@socketio.on("release_hostage")
+def on_release_hostage(data):
+    cid = data.get("id")
+    st = GAME["characters"].get(cid)
+    if not st or not st.get("hostage"):
+        return
+    st["hostage"] = False
+    log_activity(f"{display_name_for(cid)} released from hostage")
+    broadcast()
+
+
 @socketio.on("toggle_location")
 def on_toggle_location(data):
     name = data.get("name")
@@ -674,7 +858,7 @@ def on_shuffle_characters():
     broadcast()
 
     for name, cid in assignment.items():
-        char_name = CHARACTERS_BY_ID[cid]["name"]
+        char_name = display_name_for(cid)
         for sid, pname in PLAYER_SIDS.items():
             if pname.strip().lower() == name.strip().lower():
                 socketio.emit("shuffle_reveal", {"character": char_name, "id": cid}, room=sid)
@@ -688,10 +872,17 @@ def on_get_my_card(data):
     if not cid:
         socketio.emit("my_card_result", {"assigned": False}, room=request.sid)
         return
-    card = CARDS.get(cid, {})
+    card = dict(CARDS.get(cid, {}))
+    char = CHARACTERS_BY_ID.get(cid, {})
+    if char.get("is_switchable"):
+        revealed = GAME["characters"].get(cid, {}).get("revealed", False)
+        card["abilities"] = [
+            a for a in card.get("abilities", [])
+            if _ability_visible_to_player(a, revealed)
+        ]
     socketio.emit("my_card_result", {
         "assigned": True,
-        "character": CHARACTERS_BY_ID[cid]["name"],
+        "character": display_name_for(cid),
         "card": card,
     }, room=request.sid)
 
@@ -770,6 +961,7 @@ def on_new_game():
     GAME["last_vote_winner"] = None
     GAME["round_events"] = {"rescued": [], "eliminated": []}
     GAME["round_history"] = {}
+    GAME["super_abilities_announced"] = False
     # Player roster is left exactly as the host set it up via the New Game
     # dialog (remove/add/remove-all) - no automatic repopulation here.
     log_activity("New game started")

@@ -52,6 +52,17 @@ function closeReveal() {
   document.getElementById("shuffle-overlay").style.display = "none";
 }
 
+// ---- super ability unlocked (Round 3+) ----
+socket.on("super_ability_unlocked", (data) => {
+  document.getElementById("super-character-name").textContent = data.character;
+  document.getElementById("super-ability-text").textContent = data.ability;
+  document.getElementById("super-overlay").style.display = "flex";
+});
+
+function closeSuperOverlay() {
+  document.getElementById("super-overlay").style.display = "none";
+}
+
 // ---- my card ----
 socket.on("my_card_result", (data) => {
   const body = document.getElementById("mycard-body");
@@ -218,6 +229,7 @@ function renderActiveList(state) {
     return;
   }
   el.innerHTML = active.map(c => {
-    return `<div class="feed-item"><span class="team-dot" style="background:${TEAM_COLORS[c.team]};display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px"></span>${c.name}</div>`;
+    const displayName = state.characters[c.id].display_name || c.name;
+    return `<div class="feed-item"><span class="team-dot" style="background:${TEAM_COLORS[c.team]};display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px"></span>${displayName}</div>`;
   }).join("");
 }

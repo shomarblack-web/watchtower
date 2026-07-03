@@ -33,7 +33,7 @@
 <div class="layout">
   <div>
     <div class="panel">
-      <h3>Roster</h3>
+      <h3>Roster <button class="btn-ghost" style="width:auto;margin:0;padding:5px 10px;font-size:11px" title="Deactivate every character" onclick="if(confirm('Deactivate every active character?')) socket.emit('clear_all_characters')">Clear All</button></h3>
       <div id="roster"></div>
     </div>
   </div>
@@ -138,6 +138,26 @@
       <button class="btn-ghost" style="width:auto;padding:6px 12px" onclick="closePrompts()">Close</button>
     </div>
     <div id="prompts-body"></div>
+  </div>
+</div>
+
+<div id="hostage-overlay" class="map-overlay" style="display:none" onclick="if(event.target===this) closeHostageModal()">
+  <div class="card-modal hostage-modal">
+    <div class="map-modal-head">
+      <h3 style="margin:0">Two-Face — Let Fate Decide</h3>
+      <button class="btn-ghost" style="width:auto;padding:6px 12px" onclick="closeHostageModal()">Close</button>
+    </div>
+    <p style="color:var(--muted); font-size:13px; margin-top:0">
+      Pick exactly two active characters to take hostage. Flip the coin to
+      let fate decide their outcome, then use the normal action buttons on
+      their rows however that plays out.
+    </p>
+    <div style="text-align:center; margin-bottom:14px">
+      <button class="btn-ghost" style="width:auto" onclick="flipCoin()">🪙 Flip Coin</button>
+      <span id="coin-result" class="mono" style="margin-left:10px; font-weight:700"></span>
+    </div>
+    <div id="hostage-target-list" class="hostage-target-list"></div>
+    <button class="btn-primary" style="margin-top:14px" onclick="confirmHostage()">Take Hostage (10s)</button>
   </div>
 </div>
 

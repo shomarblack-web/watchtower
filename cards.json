@@ -176,12 +176,11 @@
     "strategy": "STRATEGY: Expose! Superman."
   },
   "reverse_flash": {
-    "signal": "SIGNAL:",
+    "signal": "SIGNAL - shake your hand",
     "role": "TYPE - Villain",
     "abilities": [
-      "PASSIVE ABILITY. Name. Player must be targeted -ICE for elimination.",
-      "ACTIVE ABILITY. Not So Fast. Target a player targeted-for-teleportation. Player switches seats with target. Player teleports to Watchtower instead. (Rescue!)",
-      "SUPER ABILITY. Name. Description. (Phase!)"
+      "ACTIVE ABILITY. Fastest Menace Alive. Target one player. Player takes target hostage (The Flash). (Accuse!)",
+      "ACTIVE ABILITY. Not So Fast. Target a player targeted-for-teleportation. Player switches seats with target. Player teleports to Watchtower instead. (start/Rescue!)"
     ],
     "strategy": "STRATEGY: Direction."
   },
@@ -195,14 +194,13 @@
     "strategy": "STRATEGY: Expose Batman."
   },
   "tobias_whale": {
-    "signal": "SIGNAL:",
+    "signal": "SIGNAL - dust your shoulders",
     "role": "TYPE - Villain",
     "abilities": [
-      "PASSIVE ABILITY. Name. Player must be targeted -ICE for elimination.",
-      "ACTIVE ABILITY. Name. Description. (Phase!)",
-      "SUPER ABILITY. Name. Description. (Phase!)"
+      "PASSIVE ABILITY. Albino. Player must self-identify at start of game. (Discuss!)",
+      "ACTIVE ABILITY. Harpoon. Target one player. Player takes target hostage (Black Lightning). (Accuse!)"
     ],
-    "strategy": "STRATEGY: Direction."
+    "strategy": "STRATEGY: Expose Black Lightning."
   },
   "lobo": {
     "signal": "SIGNAL: use an insult",
@@ -254,14 +252,14 @@
     "strategy": "STRATEGY: Protect Luthor."
   },
   "zod": {
-    "signal": "SIGNAL:",
+    "signal": "SIGNAL - punch your hand",
     "role": "TYPE - Villain",
     "abilities": [
-      "PASSIVE ABILITY. Name. Player must be targeted -ICE for elimination.",
-      "ACTIVE ABILITY. Kneel Before Zod. During Vote phase, Zod targets one player. That player must Vote the same as Zod or be Eliminated!.",
-      "SUPER ABILITY. Name. Description. (Phase!)"
+      "PASSIVE ABILITY. Heir to Krypton. For every Kryptonian in play (Superman/boy/girl, Krypto, Doomsday etc.) Zod gains one target. (Vote!)",
+      "ACTIVE ABILITY. Kneel Before Zod. Target one player. Target must vote the same as Zod or be eliminated. (Vote!) *same-zone only",
+      "SUPER ABILITY. Interstellar Flight. Player may move to any zone. (Rescue!)"
     ],
-    "strategy": "STRATEGY: Expose Superman."
+    "strategy": "STRATEGY: Control the game."
   },
   "cheetah": {
     "signal": "SIGNAL:",
@@ -284,44 +282,41 @@
     "strategy": "STRATEGY: Expose Batman. Find Harley"
   },
   "sinestro": {
-    "signal": "SIGNAL:",
+    "signal": "SIGNAL - touch your ring finger",
     "role": "TYPE - Villain",
     "abilities": [
-      "PASSIVE ABILITY. Name. Player must be targeted -ICE for elimination.",
-      "ACTIVE ABILITY. Name. Description. (Phase!)",
-      "SUPER ABILITY. Name. Description. (Phase!)"
+      "ACTIVE ABILITY. Agent of Fear. Target a player. Player takes target hostage (Green Lantern). (Accuse!)",
+      "SUPER ABILITY. Construct. Start an additional Accuse! phase this round. (Rescue!)"
     ],
     "strategy": "STRATEGY: Direction."
   },
   "black_adam": {
-    "signal": "SIGNAL:",
+    "signal": "SIGNAL - snap fingers",
     "role": "TYPE - Villain",
     "abilities": [
-      "PASSIVE ABILITY. Name. Player must be targeted -ICE for elimination.",
-      "ACTIVE ABILITY. Name. Description. (Phase!)",
-      "SUPER ABILITY. Name. Description. (Phase!)"
+      "ACTIVE ABILITY. Earth's Mightiest Menace. Target one player. Player takes target hostage (Captain Marvel). (Accuse!)",
+      "SUPER ABILITY. Steal Your Thunder. Target Mary Marvel or Captain Marvel Jr. Target reverts to TYPE: Civilian and is no longer Rescued. (Accuse!) *same-zone only"
     ],
-    "strategy": "STRATEGY: Direction."
+    "strategy": "STRATEGY: Expose Captain Marvel."
   },
   "zoom": {
-    "signal": "SIGNAL:",
+    "signal": "SIGNAL - shave your hand",
     "role": "TYPE - Villain",
     "abilities": [
-      "PASSIVE ABILITY. Name. Player must be targeted -ICE for elimination.",
-      "ACTIVE ABILITY. Fastest Menace Alive. Target a player. Take player hostage (The Flash). (Accuse!)",
-      "SUPER ABILITY. Name. Description. (Phase!)"
+      "PASSIVE ABILITY. Speed Thief. For every speedster in play (Flash, K. Flash, R. Flash, Jesse Quick) Zoom gains one hostage. (Accuse!) *same-zone only",
+      "ACTIVE ABILITY. Fastest Menace Alive. Target a player. Take player hostage (The Flash). (Accuse!)"
     ],
     "strategy": "STRATEGY: Expose The Flash."
   },
   "faora": {
-    "signal": "SIGNAL:",
+    "signal": "SIGNAL - punch hand",
     "role": "TYPE - Villain",
     "abilities": [
-      "PASSIVE ABILITY. Name. Player must be targeted -ICE for elimination.",
-      "ACTIVE ABILITY. Brutal. Target one player. Take that player hostage (Superman).",
-      "SUPER ABILITY. Name. Description. (Phase!)"
+      "PASSIVE ABILITY. For Krypton. For every Kryptonian in play (Superman, Krypto, Doomsday etc.) player gains one target. (Accuse!)",
+      "ACTIVE ABILITY. Brutal. Target one player. Take that player hostage (any Kryptonian). (Accuse!)",
+      "SUPER ABILITY. Interstellar Flight. Player may move to any zone. (Rescue!)"
     ],
-    "strategy": "STRATEGY: Expose Superman."
+    "strategy": "STRATEGY: Expose a Kryptonian."
   },
   "grodd": {
     "signal": "SIGNAL:",
@@ -364,31 +359,31 @@
     "strategy": "STRATEGY: Create chaos. Help Batman."
   },
   "dr_alchemy": {
-    "signal": "SIGNAL:",
+    "signal": "SIGNAL - draw an A",
     "role": "TYPE - Villain",
     "abilities": [
-      "PASSIVE ABILITY. Name. Player must be targeted -ICE for elimination.",
-      "ACTIVE ABILITY. Name. Description. (Phase!)",
-      "SUPER ABILITY. Name. Description. (Phase!)"
+      "PASSIVE ABILITY. Knowledge is Power. Player knows identity of all Bystanders.",
+      "ACTIVE ABILITY. Alchemy Stone. Target any player. Change that player to TYPE: Protector (I) or TYPE: Eliminator (II). (Inspect!) *same-zone only",
+      "SUPER ABILITY. Blackout. Change current phase to an Eliminate! phase."
     ],
-    "strategy": "STRATEGY: Direction."
+    "strategy": "STRATEGY: Create chaos."
   },
   "ares": {
-    "signal": "SIGNAL:",
+    "signal": "SIGNAL - shadow box",
     "role": "TYPE - Villain",
     "abilities": [
-      "PASSIVE ABILITY. Name. Player must be targeted -ICE for elimination.",
-      "ACTIVE ABILITY. Name. Description. (Phase!)",
-      "SUPER ABILITY. Name. Description. (Phase!)"
+      "PASSIVE ABILITY. Family Ties. Player knows identity of Wonder Woman.",
+      "PASSIVE ABILITY. War Everlasting. If eliminated, player becomes active at end of next round. (Report!)",
+      "SUPER ABILITY. Join Me... Expose Wonder Woman. Wonder Woman is auto-shielded each round if target votes the same as player. (Vote!)"
     ],
-    "strategy": "STRATEGY: Direction."
+    "strategy": "STRATEGY: Create chaos."
   },
   "maxima": {
-    "signal": "SIGNAL:",
+    "signal": "SIGNAL - flip your hair",
     "role": "TYPE - Villain",
     "abilities": [
-      "PASSIVE ABILITY. Name. Player must be targeted -ICE for elimination.",
-      "ACTIVE ABILITY. Interstellar Obsession. Knows identity of Superman.",
+      "PASSIVE ABILITY. Never Give Up. If eliminated, player becomes active at end of next round (Report!).",
+      "PASSIVE ABILITY. Interplanetary Obsession. Player knows identity of Superman.",
       "SUPER ABILITY. Join Me... Expose Superman. Superman is auto-shielded each round if Superman votes same as player. (Vote!)"
     ],
     "strategy": "STRATEGY: Expose Superman."
@@ -424,14 +419,14 @@
     "strategy": "STRATEGY: Take over the prison."
   },
   "granny_goodness": {
-    "signal": "SIGNAL:",
+    "signal": "SIGNAL - give yourself a hug",
     "role": "TYPE - Villain",
     "abilities": [
-      "PASSIVE ABILITY. Name. Player must be targeted -ICE for elimination.",
-      "ACTIVE ABILITY. Name. Description. (Phase!)",
-      "SUPER ABILITY. Name. Description. (Phase!)"
+      "ACTIVE ABILITY. Female Fury. Target up to 3 players. Signal each target. Targets are now Furies. (Inspect!)",
+      "ACTIVE ABILITY. \u2018\u2018Granny Says\u2019\u2019. Target a Fury. Give Fury a verbal command. Fury must comply. **same-zone only",
+      "SUPER ABILITY. Granny Knows. Player checks Secret Identity page. (Inspect!)"
     ],
-    "strategy": "STRATEGY: Direction."
+    "strategy": "STRATEGY: Control the game."
   },
   "doomsday": {
     "signal": "SIGNAL:",
@@ -505,12 +500,11 @@
     "strategy": "STRATEGY: Get into Watchtower."
   },
   "perry_white": {
-    "signal": "SIGNAL: clap your hands",
-    "role": "TYPE:",
+    "signal": "SIGNAL - clap your hands",
+    "role": "TYPE - Civilian",
     "abilities": [
-      "PASSIVE ABILITY. Name. Player must be targeted -ICE for elimination.",
-      "ACTIVE ABILITY. Name. Description. (Phase!)",
-      "PWHITEER ABILITY. Name. Description. (Phase!)"
+      "PASSIVE ABILITY. I\u2019m in Charge. Player knows the identity of all Civilians.",
+      "ACTIVE ABILITY. Taking One for the Team. Player must answer 'Yes' to their FIRST accusation."
     ],
     "strategy": "STRATEGY: Get into Watchtower."
   },
@@ -711,22 +705,20 @@
     "strategy": "STRATEGY: Get into Watchtower."
   },
   "harrison_wells": {
-    "signal": "SIGNAL: clap your hands",
+    "signal": "SIGNAL - clap your hands",
     "role": "TYPE - Civilian",
     "abilities": [
-      "PASSIVE ABILITY. Name. Player must be targeted -ICE for elimination.",
-      "ACTIVE ABILITY. Name. Description. (Phase!)",
-      "hwellsER ABILITY. Name. Description. (Phase!)"
+      "PASSIVE ABILITY. Know-It-All. Player knows identity of The Flash, Kid Flash, Jesse Quick, Joe West, Iris West, Vibe, Caitlin Snow, and location of zone(s): Speed Force, Earth-2, STAR Labs.",
+      "ACTIVE ABILITY. I Can Fix That. Target one player. Player regains one ability of their choosing. (Report!)"
     ],
     "strategy": "STRATEGY: Get into Watchtower."
   },
   "felicity_smoak": {
-    "signal": "SIGNAL: clap your hands",
+    "signal": "SIGNAL - clap your hands",
     "role": "TYPE - Civilian",
     "abilities": [
-      "PASSIVE ABILITY. Name. Player must be targeted -ICE for elimination.",
-      "ACTIVE ABILITY. Name. Description. (Phase!)",
-      "fsmoakER ABILITY. Name. Description. (Phase!)"
+      "PASSIVE ABILITY. Know It All. Player knows location of zone(s): N/A.",
+      "ACTIVE ABILITY. I Can Fix That. Target one player. Player regains one ability of their choosing. (Report!)"
     ],
     "strategy": "STRATEGY: Get into Watchtower."
   },
@@ -861,14 +853,14 @@
     "strategy": "STRATEGY: Stop Villains."
   },
   "thunder": {
-    "signal": "",
-    "role": "",
+    "signal": "SIGNAL - stomp your foot",
+    "role": "TYPE - Hero",
     "abilities": [
-      "PASSIVE ABILITY. Name. Player must be targeted -ICE for elimination.",
-      "ACTIVE ABILITY. Name. Description. (Phase!)",
-      "THNDRER ABILITY. Name. Description. (Phase!)"
+      "PASSIVE ABILITY. Dense. Player must be targeted twice for elimination.",
+      "ACTIVE ABILITY. Hologram. Player may lie during hostage situation (Black Lightning). (Accuse!)",
+      "SUPER ABILITY. Stomp. Pick a side (right/left). Up to five targets on that side cannot Discuss, Accuse, or Vote this round. (Inspect!)"
     ],
-    "strategy": "STRATEGY: Direction."
+    "strategy": "STRATEGY: Protect Black Lightning."
   },
   "white_martian_i": {
     "signal": "SIGNAL - cross your arms",
@@ -889,5 +881,15 @@
       "SUPER ABILITY. Mind Merge. Player initiates an Eliminate! phase. Target one player. If target is Martian Manhunter, White Martian(s) win the game! (Discuss!)"
     ],
     "strategy": "STRATEGY. Eliminate Heroes/Civilians."
+  },
+  "reign": {
+    "signal": "SIGNAL - punch hand",
+    "role": "TYPE - Villain",
+    "abilities": [
+      "PASSIVE ABILITY. For Krypton. For every Kryptonian in play (Superman, Krypto, Doomsday etc.) player gains one target. (Accuse!)",
+      "ACTIVE ABILITY. Brutal. Target one player. Take that player hostage (any Kryptonian). (Accuse!)",
+      "SUPER ABILITY. Interstellar Flight. Player may move to any zone. (Rescue!)"
+    ],
+    "strategy": "STRATEGY: Expose a Kryptonian."
   }
 }

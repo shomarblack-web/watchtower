@@ -227,7 +227,8 @@ function buildCharRow(c) {
   const nameWrap = document.createElement("div");
   nameWrap.className = "char-name";
   const nameTitle = c.epithet || TOOLTIPS.nameLink;
-  nameWrap.innerHTML = `<span class="char-name-link" data-id="${c.id}" title="${nameTitle}">${c.name}</span>
+  const secretBadge = c.is_switchable ? `<span class="secret-badge" title="Host-only: true identity">🎭 ${c.reveal_name}</span>` : "";
+  nameWrap.innerHTML = `<span class="char-name-link" data-id="${c.id}" title="${nameTitle}">${c.name}</span>${secretBadge}
                          <span class="char-pack-label">${packLabel}</span>
                          <br><input type="text" placeholder="player name" data-id="${c.id}" title="${TOOLTIPS.nameInput}">`;
   nameWrap.querySelector(".char-name-link").addEventListener("click", () => openCard(c.id));
@@ -276,6 +277,24 @@ function buildCharRow(c) {
       mid.appendChild(btn);
     }
   });
+
+  if (c.is_switchable) {
+    const revealBtn = document.createElement("button");
+    revealBtn.className = "action-btn reveal-btn";
+    revealBtn.title = `Reveal as ${c.reveal_name}`;
+    revealBtn.textContent = "Reveal";
+    revealBtn.onclick = () => socket.emit("reveal_character", { id: c.id });
+    mid.appendChild(revealBtn);
+  }
+
+  if (c.has_hostage) {
+    const hostageBtn = document.createElement("button");
+    hostageBtn.className = "action-btn hostage-btn";
+    hostageBtn.title = "Let Fate Decide - take two players hostage";
+    hostageBtn.textContent = "Take Hostage";
+    hostageBtn.onclick = () => openHostageModal(c.id);
+    mid.appendChild(hostageBtn);
+  }
 
   const right = document.createElement("div");
   right.style.display = "flex";
@@ -357,6 +376,8 @@ socket.on("state", (state) => {
   renderNewGamePlayerList(state);
 
   const spotlightSet = new Set(state.spotlight_characters || []);
+  const superActiveSet = new Set(state.super_active_characters || []);
+  const draftSet = new Set(state.draft_characters || []);
 
   CHARACTERS.forEach(c => {
     const st = state.characters[c.id];
@@ -369,6 +390,63 @@ socket.on("state", (state) => {
     const nameInput = row.querySelector("input");
     if (document.activeElement !== nameInput) nameInput.value = st.player_name || "";
 
+    const nameLink = row.querySelector(".char-name-link");
+    if (nameLink && st.display_name) nameLink.textContent = st.display_name;
+
+    let draftBadge = row.querySelector(".draft-badge");
+    if (draftSet.has(c.id) && !locked) {
+      if (!draftBadge) {
+        draftBadge = document.createElement("span");
+        draftBadge.className = "draft-badge";
+        draftBadge.title = "This card still has unfinished placeholder text from the original file";
+        draftBadge.textContent = "📝 Draft";
+        nameLink.insertAdjacentElement("afterend", draftBadge);
+      }
+    } else if (draftBadge) {
+      draftBadge.remove();
+    }
+
+    let superBadge = row.querySelector(".super-badge");
+    if (superActiveSet.has(c.id) && !locked) {
+      if (!superBadge) {
+        superBadge = document.createElement("span");
+        superBadge.className = "super-badge";
+        superBadge.title = "Super Ability is active (Round 3+)";
+        superBadge.textContent = "⭐ Super Active";
+        nameLink.insertAdjacentElement("afterend", superBadge);
+      }
+    } else if (superBadge) {
+      superBadge.remove();
+    }
+
+    const revealBtn = row.querySelector(".reveal-btn");
+    if (revealBtn) {
+      revealBtn.classList.toggle("sel", !!st.revealed);
+      revealBtn.textContent = st.revealed ? "Revealed" : "Reveal";
+    }
+
+    const hostageBtn = row.querySelector(".hostage-btn");
+    if (hostageBtn) {
+      hostageBtn.disabled = !st.revealed;
+      hostageBtn.title = st.revealed
+        ? "Let Fate Decide - take two players hostage"
+        : "Reveal this character first";
+    }
+
+    let hostageBadge = row.querySelector(".hostage-badge");
+    if (st.hostage) {
+      if (!hostageBadge) {
+        hostageBadge = document.createElement("span");
+        hostageBadge.className = "hostage-badge";
+        hostageBadge.title = "Click to release";
+        hostageBadge.textContent = "🔗 Hostage";
+        hostageBadge.onclick = () => socket.emit("release_hostage", { id: c.id });
+        row.querySelector(".char-name").appendChild(hostageBadge);
+      }
+    } else if (hostageBadge) {
+      hostageBadge.remove();
+    }
+
     const healthVal = row.querySelector('[data-role="health"]');
     if (healthVal) {
       healthVal.textContent = `${st.health}❤️`;
@@ -377,8 +455,16 @@ socket.on("state", (state) => {
     }
     const shieldVal = row.querySelector('[data-role="shield"]');
     if (shieldVal) {
-      shieldVal.textContent = `${st.shield}🛡`;
-      shieldVal.classList.toggle("zero", st.shield === 0);
+      const shieldStepper = shieldVal.closest(".stepper");
+      if (st.shield === null || st.shield === undefined) {
+        shieldVal.textContent = "🔒🛡";
+        shieldVal.classList.remove("zero");
+        if (shieldStepper) shieldStepper.classList.add("shield-locked");
+      } else {
+        shieldVal.textContent = `${st.shield}🛡`;
+        shieldVal.classList.toggle("zero", st.shield === 0);
+        if (shieldStepper) shieldStepper.classList.remove("shield-locked");
+      }
     }
     row.querySelectorAll(".special-btn").forEach(b => {
       b.classList.toggle("sel", !!st[b.dataset.field]);
@@ -521,6 +607,71 @@ function openCard(id) {
 
 function closeCard() {
   document.getElementById("card-overlay").style.display = "none";
+}
+
+// ---- hostage modal (Two-Face: Let Fate Decide) ----
+let hostageHolderId = null;
+let hostageSelected = [];
+
+function openHostageModal(holderId) {
+  hostageHolderId = holderId;
+  hostageSelected = [];
+  document.getElementById("coin-result").textContent = "";
+  renderHostageTargets();
+  document.getElementById("hostage-overlay").style.display = "flex";
+}
+
+function closeHostageModal() {
+  document.getElementById("hostage-overlay").style.display = "none";
+}
+
+function flipCoin() {
+  const result = Math.random() < 0.5 ? "HEADS" : "TAILS";
+  const el = document.getElementById("coin-result");
+  el.textContent = result;
+  el.style.color = result === "HEADS" ? "var(--amber)" : "var(--hero)";
+}
+
+function renderHostageTargets() {
+  const list = document.getElementById("hostage-target-list");
+  if (!latestState) { list.innerHTML = ""; return; }
+  const candidates = CHARACTERS.filter(c => {
+    const st = latestState.characters[c.id];
+    return st && st.active && c.id !== hostageHolderId;
+  });
+  if (!candidates.length) {
+    list.innerHTML = `<div class="empty">No other active characters to target.</div>`;
+    return;
+  }
+  list.innerHTML = candidates.map(c => {
+    const st = latestState.characters[c.id];
+    const picked = hostageSelected.includes(c.id);
+    return `<div class="hostage-target ${picked ? 'picked' : ''}" data-id="${c.id}">
+              <span class="team-dot" style="background:${TEAM_COLORS[c.team]}"></span>${st.display_name || c.name}
+            </div>`;
+  }).join("");
+  list.querySelectorAll(".hostage-target").forEach(el => {
+    el.addEventListener("click", () => toggleHostageTarget(el.dataset.id));
+  });
+}
+
+function toggleHostageTarget(cid) {
+  if (hostageSelected.includes(cid)) {
+    hostageSelected = hostageSelected.filter(x => x !== cid);
+  } else if (hostageSelected.length < 2) {
+    hostageSelected.push(cid);
+  }
+  renderHostageTargets();
+}
+
+function confirmHostage() {
+  if (hostageSelected.length !== 2) {
+    alert("Pick exactly two characters first.");
+    return;
+  }
+  socket.emit("take_hostage", { holder_id: hostageHolderId, target_ids: hostageSelected });
+  closeHostageModal();
+  openTimer(10, "Let Fate Decide!");
 }
 
 // ---- Discuss! countdown timer ----

@@ -263,6 +263,52 @@ body{
   border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px;
   margin-left: 6px; vertical-align: middle;
 }
+.secret-badge{
+  font-family:'Rajdhani', sans-serif; font-size:9px; font-weight:700;
+  letter-spacing:.03em; color: #c084fc; border: 1px solid #c084fc;
+  border-radius: 4px; padding: 1px 5px; margin-left: 6px; vertical-align: middle;
+  background: rgba(192,132,252,.08);
+}
+.super-badge{
+  font-family:'Rajdhani', sans-serif; font-size:9px; font-weight:700;
+  letter-spacing:.03em; color: var(--amber); border: 1px solid var(--amber);
+  border-radius: 4px; padding: 1px 5px; margin-left: 6px; vertical-align: middle;
+  background: rgba(245,166,35,.10);
+}
+.draft-badge{
+  font-family:'Rajdhani', sans-serif; font-size:9px; font-weight:700;
+  letter-spacing:.03em; color: var(--muted); border: 1px dashed var(--muted);
+  border-radius: 4px; padding: 1px 5px; margin-left: 6px; vertical-align: middle;
+  background: rgba(255,255,255,.04);
+}
+.reveal-btn{ background: rgba(192,132,252,.10); border-color: #c084fc; color: #c084fc; }
+.reveal-btn:hover{ background: rgba(192,132,252,.2); }
+.reveal-btn.sel{ background: #c084fc; color: #1a0f2e; border-color: #c084fc; }
+.stepper.shield-locked{ opacity: .45; }
+.stepper.shield-locked .step-btn{ pointer-events: none; }
+
+/* ---------- hostage mechanic (Two-Face) ---------- */
+.hostage-btn{
+  background: linear-gradient(135deg, #3b5f8a 0%, #3b5f8a 48%, #b8462f 52%, #b8462f 100%);
+  border-color: #b8462f; color: #fff; font-weight: 700;
+}
+.hostage-btn:hover{ filter: brightness(1.15); }
+.hostage-btn:disabled{ opacity: .35; filter: grayscale(.7); cursor: not-allowed; }
+.hostage-badge{
+  font-family:'Rajdhani', sans-serif; font-size:9px; font-weight:700;
+  letter-spacing:.03em; color: #ff8a5c; border: 1px solid #ff8a5c;
+  border-radius: 4px; padding: 1px 5px; margin-left: 6px; vertical-align: middle;
+  background: rgba(255,138,92,.10); cursor: pointer;
+}
+.hostage-modal{ max-width: 440px; }
+.hostage-target-list{ display:flex; flex-direction:column; gap:6px; max-height: 260px; overflow-y:auto; }
+.hostage-target{
+  display:flex; align-items:center; gap:8px; padding: 9px 12px;
+  border-radius: 7px; border: 1px solid var(--line); background: var(--panel-raised);
+  cursor: pointer; font-size: 14px;
+}
+.hostage-target.picked{ border-color: #b8462f; background: rgba(184,70,47,.15); }
+
 .char-name-link{ cursor:pointer; }
 .char-name-link:hover{ color: var(--amber); text-decoration: underline; }
 .char-name input{

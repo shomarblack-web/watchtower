@@ -132,6 +132,209 @@ This version stores the roster as **data**, not code:
   name at once, matching the original's behavior (several coordinates
   intentionally point to the same location).
 
+## Card content updates (round 6 of your corrections) — original 15 complete
+
+**Thunder** now has her real content, and with her, **all 15 characters
+from the original "-ICE" typo list are fully done.** Her "Hologram"
+ability adds another data point for the hostage system: she can lie during
+a hostage situation involving Black Lightning specifically — pairing with
+Tobias Whale's ability to take him hostage in the first place.
+
+**6 characters remain marked Draft across the whole roster** (from the
+broader audit, separate from the original 15): Alfred Pennyworth, Cheetah,
+Gorilla Grodd, Joker, Maggie Sawyer, Swamp Thing.
+
+## Card content updates (round 5 of your corrections)
+
+**Harrison Wells** now has his real content — confirmed as the gender-swap
+counterpart of Felicity Smoak, sharing her exact "I Can Fix That" active
+ability, plus his own "Know-It-All" passive. Cleared from Draft. Only
+**Thunder** remains from the original 15.
+
+## Card content updates (round 4 of your corrections)
+
+**Maxima** got a full rewrite (her old "-ICE" passive is replaced entirely
+with two new real passives: "Never Give Up" and "Interplanetary
+Obsession"). **Granny Goodness** now has real content and is cleared from
+Draft — only **Harrison Wells** and **Thunder** remain from the original
+15.
+
+New mechanic spotted, unrelated to hostage-taking: Granny's "Female Fury"
+converts up to 3 targeted players into a new "Fury" status, and "Granny
+Says" lets her issue a Fury a binding verbal command. Tracking this
+alongside the hostage variants for whenever we design the non-card
+mechanics.
+
+## Card content updates (round 3 of your corrections)
+
+**Perry White** now has his real content — confirmed as a gender-swap
+counterpart of Cat Grant, sharing the same "I'm in Charge" passive and
+"Taking One for the Team" active, as you flagged. Cleared from Draft.
+Both remain fully independent characters with their own state; sharing
+ability text causes no conflicts.
+
+## Card content updates (round 2 of your corrections)
+
+Updated with real content: **Zoom, Faora, Dr. Alchemy, Felicity Smoak,
+Ares**. Faora, Dr. Alchemy, and Ares now have genuine Super Abilities. All
+five cleared from the Draft badge.
+
+More hostage-pattern variations showing up here, for when we design the
+real system: Zoom targets The Flash specifically (same as round 1's
+named-hero pattern), but **Faora's targets "any Kryptonian"** — a
+*category* of characters rather than one fixed name. That's a third
+distinct shape for this mechanic (Two-Face: any two of your choice;
+Tobias Whale/Reverse Flash/Sinestro/Black Adam/Zoom: one specific named
+hero; Faora: any character matching a category). Still holding off on
+building this out until you've sent everything.
+
+## Card content updates (round 1 of your corrections)
+
+Updated with real content from the source you provided: **Tobias Whale,
+Reverse Flash, Zod, Sinestro, Black Adam**. Zod, Sinestro, and Black Adam
+now have genuine Super Abilities (they'll correctly trigger the Round 3
+badge and unlock pop-up); all five are cleared from the Draft badge list.
+
+**A pattern worth flagging before you send more cards**: several villains
+now have an ability like *"Player takes target hostage (Black Lightning)"*
+— a single, specific named hero, not "pick any active character." This is
+a different mechanic than Two-Face's "Let Fate Decide" (which lets him
+pick any two targets freely). I haven't built anything for this yet since
+I'd rather see the full pattern across all your corrections before
+designing the UI for it — let me know once you've sent everything and I'll
+figure out the right general "hostage" system that covers both cases.
+
+**Also fixed while reviewing this**: the phase-tag parser (the thing that
+powers the gold spotlight glow and player phase-reminders) only recognized
+tags directly after an opening parenthesis, like `(Accuse!)`. Reverse
+Flash's "Not So Fast" ability uses `(start/Rescue!)`, which slipped through
+undetected. Fixed to catch tags after a `/` too — confirmed it now picks
+up Rescue for that ability without breaking any of the existing ones.
+
+## New: fixed "-ICE" typo, added a Draft badge
+
+Fixed a copy-paste bug from the original file: 15 characters' passive
+ability read "Player must be targeted -ICE for elimination" — now
+correctly "twice." The likely cause: Superman's finished ability ("must be
+targeted **thrice**") was clearly copy-pasted as a starting template for
+other characters, and a bulk find-and-replace swapping "thrice" for
+"twice" chopped off the front of the word, leaving only "-ICE" behind.
+
+Since 14 of those 15 characters also have other unfinished placeholder
+text on the same card, a fixed typo alone doesn't mean the card is done —
+so every character with any remaining placeholder content (the generic
+"Name. Description. (Phase!)" stand-in, or the "SUPER" → "XER ABILITY"
+typo) now shows a dashed "📝 Draft" badge on the host console, next to
+their name, so it's easy to spot at a glance which cards still need real
+writing.
+
+**The 15 characters with the -ICE typo** (now fixed):
+- Reverse Flash
+- Tobias Whale
+- Zod
+- Sinestro
+- Black Adam
+- Zoom
+- Faora
+- Dr. Alchemy
+- Ares
+- Maxima
+- Granny Goodness
+- Perry White
+- Harrison Wells
+- Felicity Smoak
+- Thunder
+
+Of these, all but **Maxima** still show the Draft badge, since they have
+other unfinished content beyond the typo. The full set of 20 characters
+currently marked Draft: those 14, plus Alfred Pennyworth, Cheetah, Gorilla
+Grodd, Joker, Maggie Sawyer, and Swamp Thing.
+
+## New: Hostage mechanic (Two-Face's Let Fate Decide)
+
+Once Harvey Dent is revealed as Two-Face, a **Take Hostage** button appears
+on his row (Two-Face-colored, split blue/orange — disabled and grayed out
+until he's revealed). Clicking it opens "Let Fate Decide": pick exactly two
+currently-active characters, optionally flip a coin for flavor, then
+confirm — this marks both targets with a 🔗 Hostage badge and starts a
+10-second timer on the host screen. Click a Hostage badge on any row to
+release that character. Resolving what the hostage-taking actually leads to
+(elimination, rescue, whatever fits the moment) is left to your normal
+action buttons, same as the original design's intent — I didn't try to
+mechanically enforce an outcome since the source material didn't specify
+one beyond "fate decides."
+
+## New: Super Abilities activate at Round 3
+
+Starting Round 3, every active character with a real (non-placeholder)
+Super Ability gets a gold "⭐ Super Active" badge on the host roster, and
+the player behind that character gets a one-time pop-up the moment Round 3
+begins, showing their character's name and the full Super Ability text.
+This only fires once per game and only for abilities that have real
+content — none of the 20 characters with unfinished placeholder text
+(flagged earlier) will trigger it.
+
+## New: Report! script wording
+
+The scanner line now reads "Scanners indicate at least N White Martian(s)
+among you" with correct singular/plural ("1 White Martian" vs "2 White
+Martians") instead of just a bare number.
+
+## New: Clear All button
+
+Next to the Roster panel header, "Clear All" deactivates every currently
+active character in one click (with a confirmation prompt) — handy for
+resetting the board between rounds without hunting down every toggle.
+
+## New: the Switch mechanic (secret civilian identities)
+
+Seven characters now genuinely start the game disguised as an ordinary
+civilian and only become their true selves when you reveal them:
+
+| Starts as (Civilian) | Reveals as | Unlocks |
+|---|---|---|
+| Mary Batson | Mary Marvel | Shield |
+| Freddie Freeman | Cpt. Marvel, Jr. | Shield |
+| Kendra Saunders | Hawkwoman | Shield |
+| Harvey Dent | Two-Face | — |
+| Dr. Harleen Quinzel | Harley Quinn | — |
+| Dr. Caitlin Snow | Killer Frost | — |
+| Samantha Arias | Reign | — |
+
+**On the host console**, each of these seven shows a small purple 🎭 badge
+next to their civilian name at all times, so you always know their secret
+identity even before revealing it — the badge is host-only. A **Reveal**
+button on their row flips them (and can be clicked again to un-reveal if
+you hit it by mistake). The three with a shield show a 🔒 lock icon instead
+of a charge count until revealed, since their card ties the shield to a
+Hero-only ability — clicking Reveal unlocks it automatically.
+
+**Everywhere else, the name updates live the moment you reveal someone**:
+their roster row, the player's "My Card" title, their "You are ___" banner
+(they get a fresh reveal pop-up, same as the initial shuffle reveal), the
+"Active on the Board" list other players see, and even next round's Report
+recap if they were rescued or eliminated that round.
+
+**Ability filtering is real, not cosmetic.** Their card text already tagged
+each ability with which state it belongs to (e.g. "*Type: Civilian only,"
+"**Type: Hero only") — I use those exact tags now. Before reveal, a player
+opening "My Card" only sees Civilian-tagged and untagged abilities; the
+Hero/Villain-only ones are invisible until you reveal them. The host's own
+card view always shows everything, tags and all, since you need full
+information regardless of what's been revealed.
+
+One honest gap: Samantha Arias/Reign's card was never finished in the
+original file (placeholder ability text), so revealing her only changes
+her name and unlocks nothing extra — there's no real Hero/Villain-tagged
+ability to filter in or out for her. Harvey Dent, Harleen Quinzel, and
+Caitlin Snow's post-reveal abilities (a "hostage"-style mechanic in the
+original) are shown as text on their card but don't have a dedicated
+button/counter built for them yet, the way shields do — the original
+implementation of that particular mechanic was itself inconsistent in the
+source file (it reused other characters' UI elements in confusing ways),
+so I left it as informational text rather than guess at a UI for it. Let
+me know if you want that built out properly too.
+
 ## New: five host/player refinements
 
 1. **Player's "Active on the Board" list is now names only** — no health,

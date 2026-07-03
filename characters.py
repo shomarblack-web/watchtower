@@ -38,7 +38,7 @@ SHIELD_CHARACTERS = {
     "superman", "the_flash", "green_lantern", "captain_marvel", "zatanna",
     "plastic_man", "booster_gold", "krypto", "streaky", "supergirl",
     "superboy", "wonder_girl", "miss_martian", "freddie_freeman",
-    "kendra_saunders",
+    "kendra_saunders", "mary_batson",
 }
 SHIELD_START = 1
 
@@ -120,10 +120,52 @@ DISPLAY_NAME_OVERRIDES = {
     "jonathan_kent": "Pa Kent",
     "a_pennyworth": "Alfred Pennyworth",
     "grodd": "Gorilla Grodd",
+    "reign": "Samantha Arias",  # starts disguised - see SWITCH_CHARACTERS below
 }
 for _c in CHARACTERS:
     if _c["id"] in DISPLAY_NAME_OVERRIDES:
         _c["name"] = DISPLAY_NAME_OVERRIDES[_c["id"]]
+
+# Reign starts the game disguised as an ordinary civilian (Samantha Arias),
+# same as the other six switch characters below - reclassify her team to
+# match, since the roster groups by team and she should sit with the other
+# disguised civilians until revealed.
+for _c in CHARACTERS:
+    if _c["id"] == "reign":
+        _c["team"] = "civilian"
+
+# ------------------------------------------------------------------------
+# Switch mechanic: these seven start the game displayed under their
+# ordinary civilian name. The host triggers a reveal mid-game (via the
+# "Reveal" button on their roster row), which swaps their displayed name
+# to their secret identity everywhere - roster, "My Card," the shuffle
+# reveal, and narration - and unlocks whatever their card's Hero/Villain-
+# only abilities describe. Their card's own text already distinguishes
+# "Type: Civilian only" vs "Type: Hero/Villain only" abilities; players
+# only ever see the abilities that match their character's current state
+# (see get_my_card in app.py). Three of them (Mary Batson, Freddie Freeman,
+# Kendra Saunders) also don't get their shield charge until revealed, since
+# their card ties the shield to their Hero-only "Human Shield" ability.
+# ------------------------------------------------------------------------
+SWITCH_CHARACTERS = {
+    "mary_batson": "Mary Marvel",
+    "freddie_freeman": "Cpt. Marvel, Jr.",
+    "kendra_saunders": "Hawkwoman",
+    "harvey_dent": "Two-Face",
+    "dr_harleen_quinzel": "Harley Quinn",
+    "dr_caitlin_snow": "Killer Frost",
+    "reign": "Reign",
+}
+for _c in CHARACTERS:
+    _c["is_switchable"] = _c["id"] in SWITCH_CHARACTERS
+    _c["reveal_name"] = SWITCH_CHARACTERS.get(_c["id"])
+
+# Harvey Dent/Two-Face's "Let Fate Decide" ability: once revealed, he can
+# target two active characters and take them hostage for a short timer.
+# Only usable post-reveal (it's a Villain-only tagged ability on his card).
+HOSTAGE_CHARACTERS = {"harvey_dent"}
+for _c in CHARACTERS:
+    _c["has_hostage"] = _c["id"] in HOSTAGE_CHARACTERS
 
 # Well-known comics epithets, used as hover text on the host console.
 # Deliberately not exhaustive - only characters with a genuinely
