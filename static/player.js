@@ -192,16 +192,39 @@ function dismissGuide() {
   document.getElementById("phase-guide-toast").style.display = "none";
 }
 
-const VOTE_PHASES = ["Vote"];
+const VOTE_PHASES = ["Vote", "Eliminate"];
 let myVoteLocked = false;
 let pendingVote = null;
+let myCanVote = false;
 
 socket.on("my_vote_result", (data) => {
   myVote = data.choice || null;
   myVoteLocked = !!data.voted;
+  myCanVote = !!data.can_vote;
   pendingVote = null;
   if (latestState) renderVoteList(latestState);
 });
+
+socket.on("timer_update", (timer) => {
+  renderPlayerTimer(timer);
+});
+
+function renderPlayerTimer(timer) {
+  const el = document.getElementById("player-timer");
+  if (!timer || !timer.label) {
+    el.style.display = "none";
+    return;
+  }
+  const remaining = Math.max(0, timer.remaining);
+  const m = Math.floor(remaining / 60);
+  const s = remaining % 60;
+  document.getElementById("player-timer-label").textContent = timer.label;
+  document.getElementById("player-timer-display").textContent =
+    `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  el.classList.toggle("time-up", remaining <= 0);
+  el.classList.toggle("paused", !timer.running);
+  el.style.display = "flex";
+}
 
 socket.on("state", (state) => {
   latestState = state;
@@ -211,11 +234,15 @@ socket.on("state", (state) => {
   round.textContent = `ROUND ${state.round} / ${state.num_rounds}`;
   phaseLabel.textContent = state.phase_index !== null ? PHASES[state.phase_index] + "!" : "Standing by…";
 
+  renderPlayerTimer(state.timer);
+
   const votePanel = document.getElementById("vote-panel");
-  const inVotePhase = state.phase_index !== null && VOTE_PHASES.includes(PHASES[state.phase_index]);
+  const inVotePhase = state.phase_index !== null && VOTE_PHASES.includes(PHASES[state.phase_index]) && myCanVote;
   votePanel.style.display = inVotePhase ? "block" : "none";
 
   if (inVotePhase) {
+    document.getElementById("vote-panel-heading").textContent =
+      PHASES[state.phase_index] === "Eliminate" ? "Choose who to eliminate" : "Cast your vote";
     renderVoteList(state);
   }
 

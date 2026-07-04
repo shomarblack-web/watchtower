@@ -773,11 +773,13 @@ let timerSeconds = 2 * 60;
 let timerRunning = false;
 let timerHandle = null;
 let timerBeeped = false;
+let timerLabel = "Discuss!";
 
 function openTimer(startSeconds, label) {
   timerSeconds = startSeconds;
   timerBeeped = false;
-  document.getElementById("timer-title").textContent = label || "Discuss!";
+  timerLabel = label || "Discuss!";
+  document.getElementById("timer-title").textContent = timerLabel;
   renderTimer();
   showOverlay("timer-overlay");
   startTimerInterval();
@@ -790,6 +792,7 @@ function renderTimer() {
   display.textContent = `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
   display.classList.toggle("time-up", timerSeconds <= 0);
   document.getElementById("timer-toggle-btn").textContent = timerRunning ? "Pause" : "Resume";
+  socket.emit("sync_timer", { label: timerLabel, remaining: timerSeconds, running: timerRunning });
 }
 
 function startTimerInterval() {
@@ -832,6 +835,7 @@ function closeTimer() {
   clearInterval(timerHandle);
   timerRunning = false;
   hideOverlay("timer-overlay");
+  socket.emit("sync_timer", { label: null, remaining: 0, running: false });
 }
 
 function beep() {

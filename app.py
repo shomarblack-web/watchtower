@@ -142,6 +142,7 @@ GAME = {
     "super_abilities_announced": False,
     "hostage_event": None,
     "game_over": None,
+    "timer": None,
 }
 
 
@@ -204,6 +205,16 @@ def vote_candidates():
     return [
         st["player_name"] for st in GAME["characters"].values()
         if st["active"] and st.get("player_name")
+    ]
+
+
+def eliminate_candidates():
+    """Real names of active, non-Martian players - the pool White Martians
+    vote on to eliminate. Martians don't vote each other off."""
+    return [
+        st["player_name"] for cid, st in GAME["characters"].items()
+        if st["active"] and st.get("player_name")
+        and CHARACTERS_BY_ID.get(cid, {}).get("team") != "martian"
     ]
 
 
@@ -397,7 +408,16 @@ def render_phase_script():
         ]}
 
     elif phase == "Eliminate":
-        result = {"phase": "Eliminate", "kind": "static", "lines": []}
+        martian_count = sum(
+            1 for cid, st in GAME["characters"].items()
+            if st["active"] and CHARACTERS_BY_ID.get(cid, {}).get("team") == "martian"
+        )
+        martian_label = "White Martian" if martian_count == 1 else "White Martians"
+        result = {"phase": "Eliminate", "kind": "static", "lines": [
+            f"1. {martian_label} open your eyes.",
+            "2. Vote on who to eliminate.",
+            "3. Close eyes.",
+        ]}
 
     elif phase == "Protect":
         result = {"phase": "Protect", "kind": "static", "lines": [
@@ -447,12 +467,17 @@ def public_state(reveal_names):
         "characters": characters,
         "tally": vote_tally(),
         "vote_count": len(GAME["votes"]),
-        "vote_candidates": vote_candidates() if current_phase == "Vote" else [],
+        "vote_candidates": (
+            vote_candidates() if current_phase == "Vote"
+            else eliminate_candidates() if current_phase == "Eliminate"
+            else []
+        ),
         "spotlight_characters": spotlight_characters(),
         "super_active_characters": super_active_characters(),
         "draft_characters": draft_characters(),
         "hostage_event": GAME["hostage_event"],
         "game_over": GAME["game_over"],
+        "timer": GAME["timer"],
         "activity": GAME["activity"],
         "map": GAME["map"],
         "players": GAME["players"],
@@ -513,11 +538,21 @@ def push_whoami():
 
 
 def push_my_votes():
-    """Privately tell each player their own locked-in vote (or none yet) -
+    """Privately tell each player their own locked-in vote (or none yet),
+    plus whether they're eligible to vote at all in the current phase -
     never broadcast who voted for whom to anyone but the host."""
+    phase = PHASES[GAME["phase_index"]] if GAME["phase_index"] is not None else None
     for sid, name in PLAYER_SIDS.items():
         choice = GAME["votes"].get(name)
-        socketio.emit("my_vote_result", {"voted": choice is not None, "choice": choice}, room=sid)
+        can_vote = False
+        if phase == "Vote":
+            can_vote = True
+        elif phase == "Eliminate":
+            cid = find_player_character_id(name)
+            can_vote = bool(cid) and CHARACTERS_BY_ID.get(cid, {}).get("team") == "martian"
+        socketio.emit("my_vote_result", {
+            "voted": choice is not None, "choice": choice, "can_vote": can_vote,
+        }, room=sid)
 
 
 def push_condition_alert(cid, title, body):
@@ -642,10 +677,22 @@ def push_phase_guide():
                 text = PHASE_GUIDE_EVERYONE[phase]
             elif phase in PHASE_GUIDE_BYSTANDER:
                 cid = find_player_character_id(name)
-                is_actor = cid and phase in ABILITY_PHASE_MAP.get(cid, {})
+                is_actor = bool(_visible_phase_abilities(cid, phase))
                 if not is_actor:
                     text = PHASE_GUIDE_BYSTANDER[phase]
         socketio.emit("phase_guide", {"phase": phase, "text": text}, room=sid)
+
+
+def _visible_phase_abilities(cid, phase_name):
+    """Ability text tagged for this phase, excluding Super Abilities before
+    Round 3 (they're not usable yet, so no point reminding players about
+    them early)."""
+    if not cid or not phase_name:
+        return []
+    abilities = ABILITY_PHASE_MAP.get(cid, {}).get(phase_name, [])
+    if GAME["round"] < 3:
+        abilities = [a for a in abilities if "SUPER ABILITY" not in a.upper()]
+    return abilities
 
 
 def push_phase_reminders():
@@ -654,9 +701,7 @@ def push_phase_reminders():
     phase_name = PHASES[GAME["phase_index"]] if GAME["phase_index"] is not None else None
     for sid, name in PLAYER_SIDS.items():
         cid = find_player_character_id(name)
-        abilities = []
-        if cid and phase_name:
-            abilities = ABILITY_PHASE_MAP.get(cid, {}).get(phase_name, [])
+        abilities = _visible_phase_abilities(cid, phase_name)
         socketio.emit("phase_reminder", {
             "phase": phase_name,
             "character": CHARACTERS_BY_ID[cid]["name"] if cid else None,
@@ -800,6 +845,16 @@ def on_set_round(data):
 def on_set_phase(data):
     old_phase = PHASES[GAME["phase_index"]] if GAME["phase_index"] is not None else None
     idx = data.get("phase_index")
+
+    if idx is not None and PHASES[idx] == "Accuse":
+        has_targeted = any(st["active"] and st["targeted"] for st in GAME["characters"].values())
+        if not has_targeted:
+            socketio.emit("character_limit_error", {
+                "message": "Select Teleport (\u201cTargeted for Teleportation\u201d) for at "
+                           "least one player before moving to Accuse!."
+            }, room=request.sid)
+            return
+
     if old_phase == "Vote":
         tally = vote_tally()
         GAME["last_vote_winner"] = tally[0][0] if tally else None
@@ -1060,6 +1115,20 @@ def on_hostage_consequence(data):
     broadcast()
 
 
+@socketio.on("sync_timer")
+def on_sync_timer(data):
+    """Host's timer display pushes its current state here on every tick/
+    change; relay to players as a view-only display - they get no
+    controls, just the live countdown."""
+    label = data.get("label")
+    GAME["timer"] = None if not label else {
+        "label": label,
+        "remaining": data.get("remaining", 0),
+        "running": bool(data.get("running")),
+    }
+    socketio.emit("timer_update", GAME["timer"], room="players")
+
+
 @socketio.on("toggle_location")
 def on_toggle_location(data):
     name = data.get("name")
@@ -1204,7 +1273,17 @@ def on_cast_vote(data):
         return
     if voter in GAME["votes"]:
         return  # one vote only - first submission is final, no changing it
-    if target_name not in vote_candidates():
+    phase = PHASES[GAME["phase_index"]] if GAME["phase_index"] is not None else None
+    if phase == "Eliminate":
+        voter_cid = find_player_character_id(voter)
+        if not voter_cid or CHARACTERS_BY_ID.get(voter_cid, {}).get("team") != "martian":
+            return  # only White Martians vote during Eliminate!
+        candidates = eliminate_candidates()
+    elif phase == "Vote":
+        candidates = vote_candidates()
+    else:
+        return  # voting isn't open outside Vote!/Eliminate!
+    if target_name not in candidates:
         return  # not a valid candidate right now - ignore
     GAME["votes"][voter] = target_name
     log_activity(f"{voter} voted")
