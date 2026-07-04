@@ -498,6 +498,12 @@ body{
   font-family:'Rajdhani',sans-serif; font-size:12px; letter-spacing:.08em;
   text-transform: uppercase; color: var(--muted); margin-bottom: 4px;
 }
+.lobo-tracker-row{
+  display: flex; align-items: center; gap: 8px; padding: 4px 0;
+  font-size: 13px; color: var(--text);
+}
+.lobo-tracker-label{ flex: 1; }
+.lobo-tracker-count{ font-family:'JetBrains Mono', monospace; font-weight: 700; min-width: 16px; text-align: center; }
 .mycard-badges{ display: flex; gap: 8px; margin: 4px 0 10px; }
 .team-badge{ width: 34px; height: 34px; flex-shrink: 0; filter: drop-shadow(0 2px 3px rgba(0,0,0,.4)); }
 .ability-list{ margin-top: 12px; display:flex; flex-direction:column; gap:10px; }

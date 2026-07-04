@@ -185,6 +185,63 @@ function closeProtectConfirm() {
   hideOverlay("protect-confirm-overlay");
 }
 
+// ---- Parasite - absorb an Exposed player's abilities ----
+socket.on("absorption_prompt", (data) => {
+  const list = document.getElementById("absorption-candidate-list");
+  const candidates = data.candidates || [];
+  list.innerHTML = candidates.length
+    ? candidates.map(name => `<div class="hostage-target" data-name="${name}">${name}</div>`).join("")
+    : `<div class="empty">No one is currently Exposed.</div>`;
+  list.querySelectorAll(".hostage-target").forEach(el => {
+    el.addEventListener("click", () => submitAbsorptionTarget(el.dataset.name));
+  });
+  showOverlay("absorption-prompt-overlay");
+});
+
+function submitAbsorptionTarget(targetName) {
+  socket.emit("submit_absorption_target", { parasite: myName, target_name: targetName });
+  hideOverlay("absorption-prompt-overlay");
+  document.getElementById("absorption-confirm-text").textContent = `You absorbed ${targetName}'s abilities.`;
+  showOverlay("absorption-confirm-overlay");
+}
+
+function closeAbsorptionConfirm() {
+  hideOverlay("absorption-confirm-overlay");
+}
+
+// ---- Dr. Alchemy - target a player, then choose Protector/Eliminator ----
+socket.on("alchemy_prompt", (data) => {
+  const list = document.getElementById("alchemy-candidate-list");
+  const candidates = data.candidates || [];
+  list.innerHTML = candidates.length
+    ? candidates.map(name => `<div class="hostage-target" data-name="${name}">${name}</div>`).join("")
+    : `<div class="empty">No one else is active right now.</div>`;
+  list.querySelectorAll(".hostage-target").forEach(el => {
+    el.addEventListener("click", () => {
+      socket.emit("submit_alchemy_target", { alchemist: myName, target_name: el.dataset.name });
+      hideOverlay("alchemy-prompt-overlay");
+    });
+  });
+  showOverlay("alchemy-prompt-overlay");
+});
+
+socket.on("alchemy_choice_prompt", (data) => {
+  document.getElementById("alchemy-choice-target").textContent = data.target_name;
+  showOverlay("alchemy-choice-overlay");
+});
+
+function submitAlchemyChoice(choice) {
+  socket.emit("submit_alchemy_choice", { alchemist: myName, choice });
+  hideOverlay("alchemy-choice-overlay");
+  const label = choice === "protector" ? "Protector" : "Eliminator";
+  document.getElementById("alchemy-confirm-text").textContent = `They are now a ${label}.`;
+  showOverlay("alchemy-confirm-overlay");
+}
+
+function closeAlchemyConfirm() {
+  hideOverlay("alchemy-confirm-overlay");
+}
+
 // ---- secret identity reveal (Know You Anywhere) ----
 socket.on("secret_identity_reveal", (data) => {
   const reveals = data.reveals || [];
@@ -279,11 +336,18 @@ socket.on("my_card_result", (data) => {
     }
     return `<div class="ability-row"><div class="ability-desc">${a}</div></div>`;
   }).join("");
+  const trackerHtml = data.lobo_tracker ? `
+    <div class="card-meta" style="margin-top:14px">The Main Man — Exposed Tracker (${data.lobo_tracker.civilian + data.lobo_tracker.hero + data.lobo_tracker.martian} / 3)</div>
+    <div class="lobo-tracker-row"><span class="lobo-tracker-label">Civilians</span><span class="lobo-tracker-count">${data.lobo_tracker.civilian}</span></div>
+    <div class="lobo-tracker-row"><span class="lobo-tracker-label">Heroes</span><span class="lobo-tracker-count">${data.lobo_tracker.hero}</span></div>
+    <div class="lobo-tracker-row"><span class="lobo-tracker-label">Martians</span><span class="lobo-tracker-count">${data.lobo_tracker.martian}</span></div>
+  ` : "";
   body.innerHTML = `
     ${card.role ? `<div class="card-meta">${card.role}</div>` : ""}
     ${card.signal ? `<div class="card-meta">${card.signal}</div>` : ""}
     <div class="ability-list">${abilityRows || '<div class="empty">No abilities on file.</div>'}</div>
     ${card.strategy ? `<div class="card-strategy">${card.strategy}</div>` : ""}
+    ${trackerHtml}
   `;
 });
 

@@ -1,5 +1,43 @@
 # White Martian — Watchtower (Web Edition)
 
+## New: four character-specific mechanics
+
+All four built and tested end-to-end against a live server (real
+Socket.IO clients, not just unit tests):
+
+**1. Lobo's personal tracker** — a 3-counter widget (Civilians / Heroes /
+Martians exposed) on his card, both host and player-facing. Host has
++/- buttons; hitting a combined total of 3 triggers "LOBO WINS!"
+immediately. **Flagged discrepancy**: you described the categories as
+Civilian/Hero/**Villain**, but his actual card text says Civilian/Hero/
+**Martian** — I built it to match the real card text. Let me know if you
+want it changed to Villain instead.
+
+**2. Parasite's Absorption** — host sends him a prompt (Accuse! phase
+only); his player privately sees every currently-Exposed player and picks
+one. His card then shows his own 2 abilities plus a "— Absorbed from
+X —" divider followed by that character's full ability list, replacing
+any previous absorption. Confirmed only one absorption is ever active at
+a time, and the divider doesn't break the ability-text parser (learned
+that lesson from an earlier bug — prepending text to an ability would
+have broken the bold-title parsing, so absorbed abilities are appended
+as their own untouched entries instead).
+
+**3. Dr. Alchemy's Alchemy Stone** — host sends him a prompt (Inspect!
+phase only); his player picks any active player, then chooses Protector
+or Eliminator for them. Protector grants a real shield (plugs directly
+into the existing Protect-phase wizard — confirmed the target becomes
+selectable there immediately). Eliminator grants real Eliminate-phase
+voting rights alongside the White Martians (confirmed they can vote,
+and — matching how Martians don't target each other — they're excluded
+from being voted off themselves once granted this).
+
+**4. Grodd's Mind Scramble** — a "Mind Scramble x2" button on his row
+(Round 3+ only, matching the Super Ability unlock rule) that runs the
+existing Shuffle logic twice in a row, excluding Grodd himself both
+times. Confirmed with a fixed random seed that real reassignment happens
+and Grodd never moves.
+
 ## New: Host phase checklists
 
 Added to the existing phase-script popup (which already auto-opens and

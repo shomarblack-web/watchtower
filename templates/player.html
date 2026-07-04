@@ -153,6 +153,67 @@
   </div>
 </div>
 
+<div id="absorption-prompt-overlay" class="map-overlay">
+  <div class="card-modal kirby-frame">
+    <div class="kirby-inner">
+      <div class="reveal-label">Absorb Abilities</div>
+      <p style="color:var(--muted); font-size:13px">
+        Pick an Exposed player. Their card's abilities replace whatever
+        you'd previously absorbed.
+      </p>
+      <div id="absorption-candidate-list" class="hostage-target-list"></div>
+    </div>
+  </div>
+</div>
+
+<div id="absorption-confirm-overlay" class="map-overlay">
+  <div class="reveal-modal kirby-frame">
+    <div class="kirby-inner">
+      <div class="reveal-label">Absorbed</div>
+      <div class="reveal-name" id="absorption-confirm-text" style="font-size:22px">—</div>
+      <div class="reveal-buttons">
+        <button class="btn-primary" onclick="closeAbsorptionConfirm(); openMyCard();">View My Card</button>
+        <button class="btn-ghost" onclick="closeAbsorptionConfirm()">Got it</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="alchemy-prompt-overlay" class="map-overlay">
+  <div class="card-modal kirby-frame">
+    <div class="kirby-inner">
+      <div class="reveal-label">Alchemy Stone</div>
+      <p style="color:var(--muted); font-size:13px">Pick any active player to target.</p>
+      <div id="alchemy-candidate-list" class="hostage-target-list"></div>
+    </div>
+  </div>
+</div>
+
+<div id="alchemy-choice-overlay" class="map-overlay">
+  <div class="reveal-modal kirby-frame">
+    <div class="kirby-inner">
+      <div class="reveal-label">Change Their Type</div>
+      <div class="reveal-name" id="alchemy-choice-target" style="font-size:22px">—</div>
+      <div class="reveal-buttons">
+        <button class="btn-primary" onclick="submitAlchemyChoice('protector')">Protector</button>
+        <button class="btn-ghost" onclick="submitAlchemyChoice('eliminator')">Eliminator</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="alchemy-confirm-overlay" class="map-overlay">
+  <div class="reveal-modal kirby-frame">
+    <div class="kirby-inner">
+      <div class="reveal-label">Done</div>
+      <div class="reveal-name" id="alchemy-confirm-text" style="font-size:20px">—</div>
+      <div class="reveal-buttons">
+        <button class="btn-ghost" onclick="closeAlchemyConfirm()">Got it</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="inspect-waiting-overlay" class="map-overlay">
   <div class="reveal-modal kirby-frame">
     <div class="kirby-inner">

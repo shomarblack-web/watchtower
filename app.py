@@ -123,6 +123,13 @@ def fresh_character_state():
             # hand until that's built.
             "fury": False,
             "starro": False,
+            # Parasite's Absorption: character id he most recently
+            # absorbed abilities from (only meaningful for Parasite).
+            "absorbed_from": None,
+            # Dr. Alchemy's Alchemy Stone: None / "protector" / "eliminator" -
+            # grants a Protect-phase shield or Eliminate-phase vote to
+            # whoever it's set on, regardless of their normal team/kit.
+            "alchemy_type": None,
         }
     return state
 
@@ -151,8 +158,12 @@ GAME = {
     "game_over": None,
     "timer": None,
     "pending_inspection": None,
+    "lobo_tracker": {"civilian": 0, "hero": 0, "martian": 0},
     "active_inspector_cid": None,
     "active_protector_cid": None,
+    "active_absorber_cid": None,
+    "active_alchemist_cid": None,
+    "pending_alchemy": None,
 }
 
 
@@ -220,11 +231,13 @@ def vote_candidates():
 
 def eliminate_candidates():
     """Real names of active, non-Martian players - the pool White Martians
-    vote on to eliminate. Martians don't vote each other off."""
+    (and anyone Dr. Alchemy made an Eliminator) vote on to eliminate.
+    Eliminators don't vote each other off, same as Martians."""
     return [
         st["player_name"] for cid, st in GAME["characters"].items()
         if st["active"] and st.get("player_name")
         and CHARACTERS_BY_ID.get(cid, {}).get("team") != "martian"
+        and st.get("alchemy_type") != "eliminator"
     ]
 
 
@@ -333,13 +346,16 @@ def eligible_inspectors():
 
 def eligible_protectors():
     """Active, shield-unlocked characters whose ability is currently
-    visible - powers the host's Protect-phase wizard."""
+    visible - powers the host's Protect-phase wizard. Also includes
+    anyone Dr. Alchemy has granted Protector status to, regardless of
+    their normal kit."""
     return [
         {"id": cid, "name": display_name_for(cid), "can_self_protect": can_self_protect(cid)}
         for cid, st in GAME["characters"].items()
-        if st["active"] and CHARACTERS_BY_ID.get(cid, {}).get("has_shield")
-        and st.get("shield") is not None
-        and _visible_phase_abilities(cid, "Protect")
+        if st["active"] and st.get("shield") is not None and (
+            (CHARACTERS_BY_ID.get(cid, {}).get("has_shield") and _visible_phase_abilities(cid, "Protect"))
+            or st.get("alchemy_type") == "protector"
+        )
     ]
 
 
@@ -579,6 +595,9 @@ def public_state(reveal_names):
         state["eligible_inspectors"] = eligible_inspectors()
         state["active_protector_cid"] = GAME["active_protector_cid"]
         state["eligible_protectors"] = eligible_protectors()
+        state["lobo_tracker"] = GAME["lobo_tracker"]
+        state["active_absorber_cid"] = GAME["active_absorber_cid"]
+        state["active_alchemist_cid"] = GAME["active_alchemist_cid"]
     return state
 
 
@@ -641,7 +660,10 @@ def push_my_votes():
             can_vote = True
         elif phase == "Eliminate":
             cid = find_player_character_id(name)
-            can_vote = bool(cid) and CHARACTERS_BY_ID.get(cid, {}).get("team") == "martian"
+            can_vote = bool(cid) and (
+                CHARACTERS_BY_ID.get(cid, {}).get("team") == "martian"
+                or GAME["characters"].get(cid, {}).get("alchemy_type") == "eliminator"
+            )
         socketio.emit("my_vote_result", {
             "voted": choice is not None, "choice": choice, "can_vote": can_vote,
         }, room=sid)
@@ -727,6 +749,24 @@ def check_win_condition():
     if all_civilians_rescued:
         _end_game("Heroes", "HEROES WIN!", "All Civilians have been safely rescued!")
         return
+
+
+@socketio.on("adjust_lobo_tracker")
+def on_adjust_lobo_tracker(data):
+    """Lobo's personal tracker for 'The Main Man' - counts how many
+    Civilians/Heroes/Martians he's exposed. Any combination totaling 3
+    wins him the game outright."""
+    category = data.get("category")
+    delta = data.get("delta", 0)
+    if category not in ("civilian", "hero", "martian"):
+        return
+    GAME["lobo_tracker"][category] = max(0, GAME["lobo_tracker"][category] + delta)
+    log_activity(f"Lobo's tracker: {category} = {GAME['lobo_tracker'][category]}")
+    total = sum(GAME["lobo_tracker"].values())
+    if total >= 3 and not GAME["game_over"]:
+        _end_game("Lobo", "LOBO WINS!",
+                  "Lobo exposed 3 combined Civilians, Heroes, and Martians!")
+    broadcast()
 
 
 # ------------------------------------------------------------------------
@@ -953,8 +993,12 @@ def on_set_phase(data):
     if old_phase == "Inspect" and (idx is None or PHASES[idx] != "Inspect"):
         GAME["pending_inspection"] = None
         GAME["active_inspector_cid"] = None
+        GAME["active_alchemist_cid"] = None
+        GAME["pending_alchemy"] = None
     if old_phase == "Protect" and (idx is None or PHASES[idx] != "Protect"):
         GAME["active_protector_cid"] = None
+    if old_phase == "Accuse" and (idx is None or PHASES[idx] != "Accuse"):
+        GAME["active_absorber_cid"] = None
     GAME["phase_index"] = idx
     if idx is not None:
         log_activity(f"Phase: {PHASES[idx]}!")
@@ -1310,22 +1354,29 @@ def on_toggle_player_eliminated(data):
     broadcast()
 
 
-@socketio.on("shuffle_characters")
-def on_shuffle_characters():
-    players = [p["name"] for p in GAME["players"]]
-    active_ids = [cid for cid, st in GAME["characters"].items() if st["active"]]
+def _do_shuffle(exclude_char_ids=None):
+    """Randomly reassign active characters to players, excluding any
+    character ids in exclude_char_ids from both the pool being reassigned
+    and the shuffle (their current player keeps their existing character).
+    Returns an error message string on failure, or None on success."""
+    exclude_char_ids = exclude_char_ids or set()
+    fixed_names = {
+        GAME["characters"][cid]["player_name"].strip().lower()
+        for cid in exclude_char_ids
+        if GAME["characters"].get(cid, {}).get("player_name")
+    }
+    players = [p["name"] for p in GAME["players"] if p["name"].strip().lower() not in fixed_names]
+    active_ids = [
+        cid for cid, st in GAME["characters"].items()
+        if st["active"] and cid not in exclude_char_ids
+    ]
 
     if not players:
-        socketio.emit("shuffle_error", {"message": "No players in the roster yet."}, room=request.sid)
-        return
+        return "No players available to shuffle."
     if len(players) > len(active_ids):
-        socketio.emit("shuffle_error", {
-            "message": f"Not enough active characters ({len(active_ids)}) for {len(players)} players. "
-                       f"Toggle more characters on in the roster first."
-        }, room=request.sid)
-        return
+        return (f"Not enough active characters ({len(active_ids)}) for {len(players)} players. "
+                f"Toggle more characters on in the roster first.")
 
-    # Clear any previous assignments on active characters, then deal fresh.
     for cid in active_ids:
         GAME["characters"][cid]["player_name"] = ""
 
@@ -1335,14 +1386,44 @@ def on_shuffle_characters():
     for name, cid in assignment.items():
         GAME["characters"][cid]["player_name"] = name
 
-    log_activity(f"Shuffled characters to {len(players)} players")
-    broadcast()
-
     for name, cid in assignment.items():
         char_name = display_name_for(cid)
         for sid, pname in PLAYER_SIDS.items():
             if pname.strip().lower() == name.strip().lower():
                 socketio.emit("shuffle_reveal", {"character": char_name, "id": cid}, room=sid)
+    return None
+
+
+@socketio.on("shuffle_characters")
+def on_shuffle_characters():
+    error = _do_shuffle()
+    if error:
+        socketio.emit("shuffle_error", {"message": error}, room=request.sid)
+        return
+    log_activity(f"Shuffled characters to {len(GAME['players'])} players")
+    broadcast()
+    push_phase_reminders()
+
+
+@socketio.on("grodd_mind_scramble")
+def on_grodd_mind_scramble():
+    """Grodd's Super Ability: shuffle everyone's character assignment
+    twice in a row (Grodd himself is excluded, per his card)."""
+    st = GAME["characters"].get("grodd")
+    if not st or not st["active"]:
+        return
+    if GAME["round"] < 3 or not real_super_ability("grodd"):
+        socketio.emit("character_limit_error", {
+            "message": "Grodd's Super Ability isn't active until Round 3."
+        }, room=request.sid)
+        return
+    for _ in range(2):
+        error = _do_shuffle(exclude_char_ids={"grodd"})
+        if error:
+            socketio.emit("character_limit_error", {"message": error}, room=request.sid)
+            return
+    log_activity("Grodd used Mind Scramble - everyone (except Grodd) shuffled twice!")
+    broadcast()
     push_phase_reminders()
 
 
@@ -1362,6 +1443,16 @@ def on_get_my_card(data):
             if _ability_visible_to_player(a, revealed)
         ]
     st = GAME["characters"].get(cid, {})
+    if cid == "parasite" and st.get("absorbed_from"):
+        absorbed_cid = st["absorbed_from"]
+        absorbed_card = CARDS.get(absorbed_cid, {})
+        absorbed_name = display_name_for(absorbed_cid)
+        card = dict(card)
+        card["abilities"] = (
+            list(card.get("abilities", []))
+            + [f"\u2014 Absorbed from {absorbed_name} \u2014"]
+            + list(absorbed_card.get("abilities", []))
+        )
     socketio.emit("my_card_result", {
         "assigned": True,
         "character": display_name_for(cid),
@@ -1370,6 +1461,7 @@ def on_get_my_card(data):
         "is_kryptonian": char.get("is_kryptonian", False),
         "fury": bool(st.get("fury")),
         "starro": bool(st.get("starro")),
+        "lobo_tracker": GAME["lobo_tracker"] if cid == "lobo" else None,
     }, room=request.sid)
 
 
@@ -1384,8 +1476,10 @@ def on_cast_vote(data):
     phase = PHASES[GAME["phase_index"]] if GAME["phase_index"] is not None else None
     if phase == "Eliminate":
         voter_cid = find_player_character_id(voter)
-        if not voter_cid or CHARACTERS_BY_ID.get(voter_cid, {}).get("team") != "martian":
-            return  # only White Martians vote during Eliminate!
+        is_martian = voter_cid and CHARACTERS_BY_ID.get(voter_cid, {}).get("team") == "martian"
+        is_alchemy_eliminator = voter_cid and GAME["characters"].get(voter_cid, {}).get("alchemy_type") == "eliminator"
+        if not voter_cid or not (is_martian or is_alchemy_eliminator):
+            return  # only White Martians (or Alchemy-made Eliminators) vote during Eliminate!
         candidates = eliminate_candidates()
     elif phase == "Vote":
         candidates = vote_candidates()
@@ -1438,20 +1532,148 @@ def on_send_inspect_prompt(data):
     broadcast()
 
 
+def exposed_player_names(exclude_name=None):
+    """Real names of every active, assigned, currently-Exposed player -
+    the pool Parasite can absorb from."""
+    names = [
+        st["player_name"] for cid, st in GAME["characters"].items()
+        if st["active"] and st.get("player_name") and st.get("exposed")
+    ]
+    if exclude_name:
+        names = [n for n in names if n.strip().lower() != exclude_name.strip().lower()]
+    return names
+
+
+@socketio.on("send_absorption_prompt")
+def on_send_absorption_prompt(data):
+    """Host invites Parasite to silently pick one Exposed player to
+    absorb abilities from - replaces whatever he'd previously absorbed."""
+    cid = data.get("id")
+    st = GAME["characters"].get(cid)
+    if not st or not st["active"] or cid != "parasite":
+        return
+    phase = PHASES[GAME["phase_index"]] if GAME["phase_index"] is not None else None
+    if phase != "Accuse":
+        return
+    GAME["active_absorber_cid"] = cid
+    pname = (st.get("player_name") or "").strip()
+    sid = _sid_for_player(pname) if pname else None
+    if sid:
+        socketio.emit("absorption_prompt", {
+            "candidates": exposed_player_names(exclude_name=pname)
+        }, room=sid)
+    log_activity(f"{display_name_for(cid)} was invited to absorb an Exposed player's abilities")
+    broadcast()
+
+
+@socketio.on("submit_absorption_target")
+def on_submit_absorption_target(data):
+    """Parasite's player privately submits who to absorb. Replaces any
+    previously absorbed character - only one at a time."""
+    parasite_name = (data.get("parasite") or "").strip()
+    target_name = (data.get("target_name") or "").strip()
+    if not parasite_name or not target_name:
+        return
+    parasite_cid = find_player_character_id(parasite_name)
+    if not parasite_cid or parasite_cid != GAME["active_absorber_cid"]:
+        return
+    target_cid = find_player_character_id(target_name)
+    target_st = GAME["characters"].get(target_cid)
+    if not target_cid or not target_st or not target_st["active"] or not target_st.get("exposed"):
+        return
+    GAME["active_absorber_cid"] = None
+    GAME["characters"]["parasite"]["absorbed_from"] = target_cid
+    log_activity(f"Parasite absorbed {display_name_for(target_cid)}'s abilities")
+    broadcast()
+
+
+@socketio.on("send_alchemy_prompt")
+def on_send_alchemy_prompt(data):
+    """Host invites Dr. Alchemy to silently pick any active player, then
+    choose to make them a Protector or an Eliminator."""
+    cid = data.get("id")
+    st = GAME["characters"].get(cid)
+    if not st or not st["active"] or cid != "dr_alchemy":
+        return
+    phase = PHASES[GAME["phase_index"]] if GAME["phase_index"] is not None else None
+    if phase != "Inspect":
+        return
+    GAME["active_alchemist_cid"] = cid
+    GAME["pending_alchemy"] = None
+    pname = (st.get("player_name") or "").strip()
+    sid = _sid_for_player(pname) if pname else None
+    if sid:
+        socketio.emit("alchemy_prompt", {
+            "candidates": active_player_names(exclude_name=pname)
+        }, room=sid)
+    log_activity(f"{display_name_for(cid)} was invited to use the Alchemy Stone")
+    broadcast()
+
+
+@socketio.on("submit_alchemy_target")
+def on_submit_alchemy_target(data):
+    """Step 1: Dr. Alchemy's player picks who the Stone targets."""
+    alchemist_name = (data.get("alchemist") or "").strip()
+    target_name = (data.get("target_name") or "").strip()
+    if not alchemist_name or not target_name:
+        return
+    alchemist_cid = find_player_character_id(alchemist_name)
+    if not alchemist_cid or alchemist_cid != GAME["active_alchemist_cid"]:
+        return
+    target_cid = find_player_character_id(target_name)
+    if not target_cid or not GAME["characters"][target_cid]["active"]:
+        return
+    GAME["pending_alchemy"] = {"alchemist_cid": alchemist_cid, "target_cid": target_cid}
+    sid = _sid_for_player(alchemist_name)
+    if sid:
+        socketio.emit("alchemy_choice_prompt", {
+            "target_name": display_name_for(target_cid)
+        }, room=sid)
+    broadcast()
+
+
+@socketio.on("submit_alchemy_choice")
+def on_submit_alchemy_choice(data):
+    """Step 2: Dr. Alchemy's player chooses Protector or Eliminator for
+    whoever they targeted in step 1."""
+    alchemist_name = (data.get("alchemist") or "").strip()
+    choice = data.get("choice")
+    pending = GAME["pending_alchemy"]
+    if not alchemist_name or choice not in ("protector", "eliminator") or not pending:
+        return
+    alchemist_cid = find_player_character_id(alchemist_name)
+    if not alchemist_cid or alchemist_cid != pending["alchemist_cid"]:
+        return
+    target_cid = pending["target_cid"]
+    target_st = GAME["characters"].get(target_cid)
+    if not target_st or not target_st["active"]:
+        return
+    target_st["alchemy_type"] = choice
+    if choice == "protector" and target_st.get("shield") is None:
+        target_st["shield"] = SHIELD_START
+    GAME["active_alchemist_cid"] = None
+    GAME["pending_alchemy"] = None
+    log_activity(f"{display_name_for(alchemist_cid)} made {display_name_for(target_cid)} a {choice.capitalize()}")
+    broadcast()
+
+
 @socketio.on("send_protect_prompt")
 def on_send_protect_prompt(data):
     """Host invites a specific eligible Hero to choose who to protect this
     phase - only that character's player can submit a target until it's
-    resolved or the host moves to someone else."""
+    resolved or the host moves to someone else. Also works for anyone
+    Dr. Alchemy granted Protector status to."""
     cid = data.get("id")
     st = GAME["characters"].get(cid)
     char = CHARACTERS_BY_ID.get(cid)
-    if not st or not st["active"] or not char or not char.get("has_shield") or st.get("shield") is None:
+    is_natural_protector = char and char.get("has_shield") and st and st.get("shield") is not None
+    is_alchemy_protector = st and st.get("alchemy_type") == "protector" and st.get("shield") is not None
+    if not st or not st["active"] or not (is_natural_protector or is_alchemy_protector):
         return
     phase = PHASES[GAME["phase_index"]] if GAME["phase_index"] is not None else None
     if phase != "Protect":
         return
-    if not _visible_phase_abilities(cid, "Protect"):
+    if is_natural_protector and not _visible_phase_abilities(cid, "Protect"):
         return  # locked Super Ability before Round 3
     GAME["active_protector_cid"] = cid
     pname = (st.get("player_name") or "").strip()
@@ -1607,6 +1829,10 @@ def on_new_game():
     GAME["pending_inspection"] = None
     GAME["active_inspector_cid"] = None
     GAME["active_protector_cid"] = None
+    GAME["lobo_tracker"] = {"civilian": 0, "hero": 0, "martian": 0}
+    GAME["active_absorber_cid"] = None
+    GAME["active_alchemist_cid"] = None
+    GAME["pending_alchemy"] = None
     # Player roster is left exactly as the host set it up via the New Game
     # dialog (remove/add/remove-all) - no automatic repopulation here.
     log_activity("New game started")

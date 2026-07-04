@@ -342,6 +342,37 @@ function buildCharRow(c) {
     controls.appendChild(hostageBtn);
   }
 
+  if (c.id === "grodd") {
+    const scrambleBtn = document.createElement("button");
+    scrambleBtn.className = "action-btn reveal-btn";
+    scrambleBtn.title = "Mind Scramble - shuffle everyone (except Grodd) twice. Active Round 3+.";
+    scrambleBtn.textContent = "Mind Scramble x2";
+    scrambleBtn.onclick = () => {
+      if (confirm("Shuffle every player's character assignment twice (Grodd excluded)? This can't be undone.")) {
+        socket.emit("grodd_mind_scramble");
+      }
+    };
+    controls.appendChild(scrambleBtn);
+  }
+
+  if (c.id === "parasite") {
+    const absorbBtn = document.createElement("button");
+    absorbBtn.className = "action-btn reveal-btn";
+    absorbBtn.title = "Send Parasite a list of Exposed players to absorb from (Accuse! phase only)";
+    absorbBtn.textContent = "Send Absorption Prompt";
+    absorbBtn.onclick = () => socket.emit("send_absorption_prompt", { id: c.id });
+    controls.appendChild(absorbBtn);
+  }
+
+  if (c.id === "dr_alchemy") {
+    const alchemyBtn = document.createElement("button");
+    alchemyBtn.className = "action-btn reveal-btn";
+    alchemyBtn.title = "Send Dr. Alchemy a list of players to target with the Alchemy Stone (Inspect! phase only)";
+    alchemyBtn.textContent = "Send Alchemy Prompt";
+    alchemyBtn.onclick = () => socket.emit("send_alchemy_prompt", { id: c.id });
+    controls.appendChild(alchemyBtn);
+  }
+
   const actions = document.createElement("div");
   actions.className = "action-row";
   const ACTION_LABELS = { end: "ELM" };
@@ -698,9 +729,21 @@ function renderHostCardBadges(c, st) {
 // ---- character ability card ----
 function openCard(id) {
   const c = CHARACTERS.find(x => x.id === id);
-  const card = CARDS[id];
+  let card = CARDS[id];
   document.getElementById("card-name").textContent = c ? c.name : id;
   renderHostCardBadges(c, latestState ? latestState.characters[id] : null);
+
+  if (id === "parasite" && latestState && latestState.characters.parasite && latestState.characters.parasite.absorbed_from) {
+    const absorbedId = latestState.characters.parasite.absorbed_from;
+    const absorbedCard = CARDS[absorbedId];
+    const absorbedName = (latestState.characters[absorbedId] || {}).display_name
+      || (CHARACTERS.find(x => x.id === absorbedId) || {}).name || absorbedId;
+    if (card && absorbedCard) {
+      card = Object.assign({}, card, {
+        abilities: [...(card.abilities || []), `— Absorbed from ${absorbedName} —`, ...(absorbedCard.abilities || [])]
+      });
+    }
+  }
 
   const body = document.getElementById("card-body");
   if (!card) {
@@ -723,10 +766,34 @@ function openCard(id) {
       ${card.signal ? `<div class="card-meta">${card.signal}</div>` : ""}
       <div class="ability-list">${abilityRows || '<div class="empty">No abilities on file.</div>'}</div>
       ${card.strategy ? `<div class="card-strategy">${card.strategy}</div>` : ""}
+      ${id === "lobo" ? renderLoboTrackerHtml() : ""}
     `;
   }
 
   showOverlay("card-overlay");
+}
+
+function renderLoboTrackerHtml() {
+  const t = (latestState && latestState.lobo_tracker) || { civilian: 0, hero: 0, martian: 0 };
+  const total = t.civilian + t.hero + t.martian;
+  const row = (cat, label) => `
+    <div class="lobo-tracker-row">
+      <span class="lobo-tracker-label">${label}</span>
+      <button class="btn-ghost" style="width:auto;padding:2px 8px" onclick="adjustLoboTracker('${cat}', -1)">–</button>
+      <span class="lobo-tracker-count">${t[cat]}</span>
+      <button class="btn-ghost" style="width:auto;padding:2px 8px" onclick="adjustLoboTracker('${cat}', 1)">+</button>
+    </div>`;
+  return `
+    <div class="card-meta" style="margin-top:14px">The Main Man — Exposed Tracker (${total} / 3)</div>
+    ${row("civilian", "Civilians")}
+    ${row("hero", "Heroes")}
+    ${row("martian", "Martians")}
+  `;
+}
+
+function adjustLoboTracker(category, delta) {
+  socket.emit("adjust_lobo_tracker", { category, delta });
+  setTimeout(() => { if (document.getElementById("card-overlay").classList.contains("overlay-open")) openCard("lobo"); }, 150);
 }
 
 function closeCard() {
