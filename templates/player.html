@@ -116,6 +116,53 @@
   </div>
 </div>
 
+<div id="inspect-prompt-overlay" class="map-overlay">
+  <div class="card-modal kirby-frame">
+    <div class="kirby-inner">
+      <div class="reveal-label">Ask Watchtower</div>
+      <p style="color:var(--muted); font-size:13px">
+        Silently pick a player. Watchtower will tell you privately if
+        they're a White Martian.
+      </p>
+      <div id="inspect-candidate-list" class="hostage-target-list"></div>
+    </div>
+  </div>
+</div>
+
+<div id="inspect-waiting-overlay" class="map-overlay">
+  <div class="reveal-modal kirby-frame">
+    <div class="kirby-inner">
+      <div class="reveal-label">Asked Watchtower about</div>
+      <div class="reveal-name" id="inspect-waiting-target" style="font-size:26px">—</div>
+      <p style="color:var(--muted); font-size:13px; margin-top:10px">Waiting for an answer&hellip;</p>
+    </div>
+  </div>
+</div>
+
+<div id="inspect-answer-overlay" class="map-overlay">
+  <div class="reveal-modal kirby-frame">
+    <div class="kirby-inner">
+      <div class="reveal-label">Watchtower says</div>
+      <div class="reveal-name" id="inspect-answer-text" style="font-size:30px">—</div>
+      <div class="reveal-buttons">
+        <button class="btn-ghost" onclick="closeInspectAnswer()">Got it</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="secret-identity-overlay" class="map-overlay">
+  <div class="reveal-modal kirby-frame">
+    <div class="kirby-inner">
+      <div class="reveal-label">You Know You Anywhere</div>
+      <div class="reveal-name" id="secret-identity-text" style="font-size:22px; line-height:1.6">—</div>
+      <div class="reveal-buttons">
+        <button class="btn-ghost" onclick="closeSecretIdentity()">Got it</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="mycard-overlay" class="map-overlay" onclick="if(event.target===this) closeMyCard()">
   <div class="card-modal kirby-frame">
     <div class="kirby-inner">

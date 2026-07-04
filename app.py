@@ -33,7 +33,7 @@ from characters import (
     CHARACTERS, CHARACTERS_BY_ID, TEAM_LABELS, TEAM_COLORS, PHASES, NUM_ROUNDS,
     MAX_HEALTH, SHIELD_START, COLUMN_COLORS, DCEU_GRID, DCEU_LOCATIONS, PHASE_INFO,
     NARRATION_PROMPTS, INTRO_SCRIPT, PACKS, PACK_LABELS, SWITCH_CHARACTERS,
-    HOSTAGE_ABILITIES, KRYPTONIAN_IDS,
+    HOSTAGE_ABILITIES, KRYPTONIAN_IDS, KNOWS_IDENTITY_OF,
 )
 
 CARDS = json.loads((Path(__file__).parent / "cards.json").read_text())
@@ -143,6 +143,8 @@ GAME = {
     "hostage_event": None,
     "game_over": None,
     "timer": None,
+    "pending_inspection": None,
+    "active_inspector_cid": None,
 }
 
 
@@ -185,7 +187,7 @@ def _ability_visible_to_player(ability_text, revealed):
 
 def log_activity(text):
     GAME["activity"].insert(0, text)
-    GAME["activity"] = GAME["activity"][:12]
+    GAME["activity"] = GAME["activity"][:5]
 
 
 def vote_tally():
@@ -215,6 +217,100 @@ def eliminate_candidates():
         st["player_name"] for cid, st in GAME["characters"].items()
         if st["active"] and st.get("player_name")
         and CHARACTERS_BY_ID.get(cid, {}).get("team") != "martian"
+    ]
+
+
+def has_martian_inspect_ability(cid):
+    """True if this character's Inspect-tagged ability is specifically the
+    'ask Watchtower if this player is a Martian' kind (detected by the
+    ability text itself mentioning Martian), as opposed to some other
+    Inspect-tagged effect like Dr. Alchemy's type-swap."""
+    for a in ABILITY_PHASE_MAP.get(cid, {}).get("Inspect", []):
+        if "martian" in a.lower():
+            return True
+    return False
+
+
+def active_player_names(exclude_name=None):
+    """Real names of every active, assigned player, optionally excluding
+    one (e.g. the player asking shouldn't be able to inspect themselves)."""
+    names = [
+        st["player_name"] for st in GAME["characters"].values()
+        if st["active"] and st.get("player_name")
+    ]
+    if exclude_name:
+        names = [n for n in names if n.strip().lower() != exclude_name.strip().lower()]
+    return names
+
+
+def _resolve_identity_targets(specs):
+    """Expand a list of target specs (literal character ids, or
+    'team:<name>' for a whole team) into concrete character ids."""
+    ids = []
+    for spec in specs:
+        if spec.startswith("team:"):
+            team = spec.split(":", 1)[1]
+            ids.extend(
+                cid for cid, c in CHARACTERS_BY_ID.items() if c.get("team") == team
+            )
+        else:
+            ids.append(spec)
+    return ids
+
+
+def compute_secret_identity_reveals():
+    """For every active, assigned character with a 'knows identity of X'
+    passive (X being a single character or a whole team), one entry per
+    resolved target that's also active and assigned. Used both to push
+    the private player alerts (grouped per-asker) and to show the host a
+    summary of who was told what."""
+    reveals = []
+    for asker_cid, specs in KNOWS_IDENTITY_OF.items():
+        asker_st = GAME["characters"].get(asker_cid)
+        if not asker_st or not asker_st["active"] or not asker_st.get("player_name"):
+            continue
+        for target_cid in _resolve_identity_targets(specs):
+            if target_cid == asker_cid:
+                continue  # never "reveal" yourself to yourself
+            target_st = GAME["characters"].get(target_cid)
+            if not target_st or not target_st["active"] or not target_st.get("player_name"):
+                continue
+            reveals.append({
+                "asker_id": asker_cid,
+                "asker_name": display_name_for(asker_cid),
+                "asker_player": asker_st["player_name"],
+                "target_id": target_cid,
+                "target_name": display_name_for(target_cid),
+                "target_player": target_st["player_name"],
+            })
+    return reveals
+
+
+def push_secret_identity_reveals():
+    by_asker = {}
+    for reveal in compute_secret_identity_reveals():
+        by_asker.setdefault(reveal["asker_player"], []).append(reveal)
+    for asker_player, reveals in by_asker.items():
+        sid = _sid_for_player(asker_player)
+        if sid:
+            socketio.emit("secret_identity_reveal", {
+                "reveals": [
+                    {"target_player": r["target_player"], "target_name": r["target_name"]}
+                    for r in reveals
+                ]
+            }, room=sid)
+
+
+def eligible_inspectors():
+    """Active characters whose Inspect ability is the 'ask Watchtower if
+    a player is a Martian' kind, and whose ability is currently visible
+    (i.e. not a locked Super Ability before Round 3). Powers the host's
+    Inspect-phase wizard."""
+    return [
+        {"id": cid, "name": display_name_for(cid)}
+        for cid, st in GAME["characters"].items()
+        if st["active"] and has_martian_inspect_ability(cid)
+        and _visible_phase_abilities(cid, "Inspect")
     ]
 
 
@@ -295,60 +391,29 @@ def _active_names_by_team(team):
     ]
 
 
-HOST_CHECKLISTS = {
-    "Report": [
-        "Read the line above aloud.",
-        "This is a recap only - no player actions this phase besides listening.",
-    ],
-    "Discuss": [
-        "Read the line above aloud.",
-        "Start the 2-minute timer below.",
-        "Watch for a nomination seconded by a different, non-targeted player - that's what ends this phase.",
-        "Remember: a player may NOT nominate themselves.",
-    ],
-    "Vote": [
-        "Ask line 1 aloud and collect a show of hands (thumbs up / thumbs down) - the targeted player votes too.",
-        "Majority decides. If they win the vote, announce line 2.",
-        "If they lose the vote, start a new Discuss! phase instead of continuing to Accuse.",
-    ],
-    "Accuse": [
-        "Read the line above aloud.",
-        "Let any character spotlighted gold (Accuser-type) make their accusation.",
-    ],
-    "Rescue": [
-        "Read both lines above aloud, in order.",
-        "Reveal the identity of the rescued civilian.",
-        "Confirm everyone's eyes are closed before moving on to Eliminate!.",
-    ],
-    "Eliminate": [
-        "Call on the White Martians (and anyone else spotlighted gold) to open their eyes.",
-        "Give them about a minute to silently agree on a target.",
-        "Have everyone close their eyes again before moving on.",
-    ],
-    "Protect": [
-        "Call each character spotlighted gold (Protector-type) one at a time using the line above.",
-        "Only one player should have their eyes open at a time.",
-        "Apply their shield once they've chosen a target.",
-    ],
-    "Inspect": [
-        "Call each character spotlighted gold (Inspector-type) one at a time using the line above.",
-        "Only one player should have their eyes open at a time.",
-    ],
-}
-
-
 def render_phase_script():
     """Build the exact line(s) the moderator should read aloud for whatever
-    phase is currently active, filled in from live game state, plus a
-    host-facing action checklist for that phase. Returns None when no
-    phase is selected.
+    phase is currently active, filled in from live game state. Returns
+    None when no phase is selected.
     """
     idx = GAME["phase_index"]
     if idx is None:
         return None
     phase = PHASES[idx]
 
-    if phase == "Report":
+    if phase == "Secret Identity":
+        reveals = compute_secret_identity_reveals()
+        if reveals:
+            lines = [
+                f"Told {r['asker_player']} ({r['asker_name']}): {r['target_player']} is {r['target_name']}."
+                for r in reveals
+            ]
+        else:
+            lines = ["No active, assigned characters currently have a matching "
+                     "Know You Anywhere-style ability to reveal."]
+        result = {"phase": "Secret Identity", "kind": "static", "lines": lines}
+
+    elif phase == "Report":
         prev_round = GAME["round"] - 1
         history = GAME["round_history"].get(prev_round)
         if GAME["round"] <= 1 or not history:
@@ -420,21 +485,27 @@ def render_phase_script():
         ]}
 
     elif phase == "Protect":
-        result = {"phase": "Protect", "kind": "static", "lines": [
-            "[Hero], open your eyes. Choose one other player to shield... "
-            "All right, close your eyes."
-        ]}
+        shield_actors = [
+            cid for cid, st in GAME["characters"].items()
+            if st["active"] and CHARACTERS_BY_ID.get(cid, {}).get("has_shield")
+            and st.get("shield") is not None  # skip switch characters not yet revealed
+        ]
+        if shield_actors:
+            lines = [
+                f"{display_name_for(cid)}, open your eyes. Choose one other player "
+                f"to shield... All right, now close your eyes."
+                for cid in shield_actors
+            ]
+        else:
+            lines = ["No active character currently has a Protect/Shield ability."]
+        result = {"phase": "Protect", "kind": "steps", "lines": lines}
 
     elif phase == "Inspect":
-        result = {"phase": "Inspect", "kind": "static", "lines": [
-            "[Hero], open your eyes. Choose one other player to inspect... "
-            "All right, close your eyes."
-        ]}
+        result = {"phase": "Inspect", "kind": "interactive", "lines": []}
 
     else:
         return None
 
-    result["checklist"] = HOST_CHECKLISTS.get(phase, [])
     return result
 
 
@@ -487,6 +558,9 @@ def public_state(reveal_names):
     }
     if reveal_names:
         state["votes"] = GAME["votes"]
+        state["pending_inspection"] = GAME["pending_inspection"]
+        state["active_inspector_cid"] = GAME["active_inspector_cid"]
+        state["eligible_inspectors"] = eligible_inspectors()
     return state
 
 
@@ -858,14 +932,22 @@ def on_set_phase(data):
     if old_phase == "Vote":
         tally = vote_tally()
         GAME["last_vote_winner"] = tally[0][0] if tally else None
+    if old_phase == "Inspect" and (idx is None or PHASES[idx] != "Inspect"):
+        GAME["pending_inspection"] = None
+        GAME["active_inspector_cid"] = None
     GAME["phase_index"] = idx
     if idx is not None:
         log_activity(f"Phase: {PHASES[idx]}!")
         if PHASES[idx] not in ("Vote", "Accuse"):
             GAME["votes"] = {}
+        if PHASES[idx] == "Protect":
+            for st in GAME["characters"].values():
+                st["protection"] = [False, False, False]
     broadcast()
     push_phase_reminders()
     push_phase_guide()
+    if idx is not None and PHASES[idx] == "Secret Identity":
+        push_secret_identity_reveals()
 
 
 @socketio.on("clear_all_characters")
@@ -1296,6 +1378,89 @@ def on_reset_votes():
     broadcast()
 
 
+def _sid_for_player(name):
+    target = name.strip().lower()
+    for sid, pname in PLAYER_SIDS.items():
+        if pname.strip().lower() == target:
+            return sid
+    return None
+
+
+@socketio.on("send_inspect_prompt")
+def on_send_inspect_prompt(data):
+    """Host invites a specific eligible character to ask Watchtower a
+    question this phase - only that character's player can submit a
+    target until it's answered or the host moves to someone else."""
+    cid = data.get("id")
+    st = GAME["characters"].get(cid)
+    if not st or not st["active"] or not has_martian_inspect_ability(cid):
+        return
+    phase = PHASES[GAME["phase_index"]] if GAME["phase_index"] is not None else None
+    if phase != "Inspect":
+        return
+    if not _visible_phase_abilities(cid, "Inspect"):
+        return  # e.g. Superman's X-Ray Vision is a locked Super Ability before Round 3
+    GAME["active_inspector_cid"] = cid
+    GAME["pending_inspection"] = None
+    pname = (st.get("player_name") or "").strip()
+    sid = _sid_for_player(pname) if pname else None
+    if sid:
+        socketio.emit("inspect_prompt", {
+            "candidates": active_player_names(exclude_name=pname)
+        }, room=sid)
+    log_activity(f"{display_name_for(cid)} was invited to ask Watchtower a question")
+    broadcast()
+
+
+@socketio.on("ask_watchtower")
+def on_ask_watchtower(data):
+    """A player with a 'is this player a Martian?' Inspect ability
+    silently asks Watchtower about another active player. The host sees
+    the request privately and answers Yes/No, which goes back to only
+    the asking player - no one else ever sees this exchange."""
+    asker_name = (data.get("asker") or "").strip()
+    target_name = (data.get("target_name") or "").strip()
+    if not asker_name or not target_name:
+        return
+    phase = PHASES[GAME["phase_index"]] if GAME["phase_index"] is not None else None
+    if phase != "Inspect":
+        return
+    asker_cid = find_player_character_id(asker_name)
+    if not asker_cid or not has_martian_inspect_ability(asker_cid):
+        return
+    if asker_cid != GAME["active_inspector_cid"]:
+        return  # host hasn't invited this character to ask yet
+    if GAME["pending_inspection"]:
+        sid = _sid_for_player(asker_name)
+        if sid:
+            socketio.emit("ask_watchtower_error", {
+                "message": "Watchtower is answering someone else right now - try again in a moment."
+            }, room=sid)
+        return
+    if target_name not in active_player_names(exclude_name=asker_name):
+        return
+    GAME["pending_inspection"] = {"asker_name": asker_name, "target_name": target_name}
+    log_activity("An Inspect ability asked Watchtower a question")
+    broadcast()
+
+
+@socketio.on("answer_watchtower")
+def on_answer_watchtower(data):
+    pending = GAME["pending_inspection"]
+    if not pending:
+        return
+    answer = bool(data.get("answer"))
+    sid = _sid_for_player(pending["asker_name"])
+    if sid:
+        socketio.emit("inspection_answer", {
+            "target_name": pending["target_name"], "answer": answer,
+        }, room=sid)
+    log_activity(f"Watchtower answered {'Yes' if answer else 'No'}")
+    GAME["pending_inspection"] = None
+    GAME["active_inspector_cid"] = None
+    broadcast()
+
+
 def _clear_player_from_characters(name):
     norm = name.strip().lower()
     for st in GAME["characters"].values():
@@ -1352,6 +1517,8 @@ def on_new_game():
     GAME["super_abilities_announced"] = False
     GAME["hostage_event"] = None
     GAME["game_over"] = None
+    GAME["pending_inspection"] = None
+    GAME["active_inspector_cid"] = None
     # Player roster is left exactly as the host set it up via the New Game
     # dialog (remove/add/remove-all) - no automatic repopulation here.
     log_activity("New game started")

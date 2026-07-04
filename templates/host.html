@@ -18,6 +18,14 @@
   </div>
 </div>
 
+<div id="inspection-banner" class="hostage-banner" style="display:none">
+  <div id="inspection-banner-text"></div>
+  <div class="hostage-banner-buttons">
+    <button class="btn-primary" style="margin:0" onclick="socket.emit('answer_watchtower', {answer: true})">Yes</button>
+    <button class="btn-ghost" style="margin:0" onclick="socket.emit('answer_watchtower', {answer: false})">No</button>
+  </div>
+</div>
+
 <div id="gameover-banner" class="gameover-banner" style="display:none">
   <div id="gameover-banner-title"></div>
   <div id="gameover-banner-message"></div>
@@ -179,7 +187,6 @@
     </div>
     <div id="phase-script-lines"></div>
     <div id="phase-script-timer"></div>
-    <div id="phase-script-checklist"></div>
   </div>
 </div>
 

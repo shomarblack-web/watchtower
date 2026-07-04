@@ -187,11 +187,22 @@ PHASES.forEach((p, idx) => {
   el.title = `Select ${p} phase`;
   el.onclick = () => {
     const turningOff = latestState && latestState.phase_index === idx;
+    if (!turningOff && p === "Inspect" && !anyoneShielded()) {
+      const proceed = confirm("No one was shielded during Protect! phase. Are you sure you want to move forward to Inspect?");
+      if (!proceed) return;
+    }
     socket.emit("set_phase", { phase_index: turningOff ? null : idx });
   };
   el.dataset.phase = idx;
   phaseStrip.appendChild(el);
 });
+
+function anyoneShielded() {
+  if (!latestState) return true;  // no data yet - don't block
+  return Object.values(latestState.characters).some(
+    st => st.active && Array.isArray(st.protection) && st.protection.some(Boolean)
+  );
+}
 
 // ---- build roster once (grouped by team), then patch state on updates ----
 const TEAMS = ["martian", "hero", "villain", "civilian", "sidekick", "bystander"];
@@ -879,15 +890,37 @@ function openPhaseScript(script) {
   showOverlay("phase-script-overlay");
 }
 
-let lastChecklistPhase = null;
+let lastStepsPhase = null;
+let stepIndex = 0;
+let inspectStepIndex = 0;
+let lastInspectPhase = null;
 
 function renderPhaseScriptBody(script) {
   document.getElementById("phase-script-title").textContent = script.phase + "!";
 
   const linesEl = document.getElementById("phase-script-lines");
-  linesEl.innerHTML = script.lines.length
-    ? script.lines.map(line => `<div class="phase-script-line">${line}</div>`).join("")
-    : `<div class="phase-script-line" style="opacity:.6">No line to read for this phase - see the checklist below.</div>`;
+
+  if (script.kind === "interactive" && script.phase === "Inspect") {
+    if (script.phase !== lastInspectPhase) {
+      lastInspectPhase = script.phase;
+      inspectStepIndex = 0;
+    }
+    renderInspectWizard();
+  } else if (script.kind === "steps" && script.lines.length > 1) {
+    lastInspectPhase = null;
+    if (script.phase !== lastStepsPhase) {
+      lastStepsPhase = script.phase;
+      stepIndex = 0;
+    }
+    if (stepIndex >= script.lines.length) stepIndex = script.lines.length - 1;
+    renderStepLine(script.lines);
+  } else {
+    lastStepsPhase = null;
+    lastInspectPhase = null;
+    linesEl.innerHTML = script.lines.length
+      ? script.lines.map(line => `<div class="phase-script-line">${line}</div>`).join("")
+      : `<div class="phase-script-line" style="opacity:.6">No line to read for this phase.</div>`;
+  }
 
   const timerEl = document.getElementById("phase-script-timer");
   timerEl.innerHTML = "";
@@ -897,24 +930,95 @@ function renderPhaseScriptBody(script) {
   if (script.phase === "Vote") {
     timerEl.innerHTML = `<button class="btn-primary" style="margin-top:14px" onclick="closePhaseScript(); openTimer(2*60, 'Vote!');">Start 2-minute timer</button>`;
   }
+}
 
-  // Only rebuild the checklist when the phase actually changes, so
-  // checking items off doesn't get wiped out by live script refreshes
-  // (e.g. Vote's tally updating every few seconds).
-  if (script.phase !== lastChecklistPhase) {
-    lastChecklistPhase = script.phase;
-    const checklistEl = document.getElementById("phase-script-checklist");
-    const items = script.checklist || [];
-    checklistEl.innerHTML = items.length
-      ? `<div class="checklist-heading">Host Checklist</div>` +
-        items.map((item, i) => `
-          <label class="checklist-item">
-            <input type="checkbox" id="checklist-${i}">
-            <span>${item}</span>
-          </label>
-        `).join("")
-      : "";
+function renderInspectWizard() {
+  const linesEl = document.getElementById("phase-script-lines");
+  const inspectors = (latestState && latestState.eligible_inspectors) || [];
+
+  if (!inspectors.length) {
+    linesEl.innerHTML = `<div class="phase-script-line" style="opacity:.6">No active character can currently ask Watchtower this question.</div>`;
+    return;
   }
+  if (inspectStepIndex >= inspectors.length) inspectStepIndex = inspectors.length - 1;
+  const current = inspectors[inspectStepIndex];
+  const isFirst = inspectStepIndex === 0;
+  const isLast = inspectStepIndex >= inspectors.length - 1;
+
+  const pending = latestState.pending_inspection;
+  const invitedId = latestState.active_inspector_cid;
+  const currentCharState = latestState.characters[current.id];
+  const currentIsInvited = invitedId === current.id;
+
+  let bodyHtml;
+  if (currentIsInvited && pending) {
+    // A pick has come back - host needs to answer Yes/No.
+    const targetChar = Object.entries(latestState.characters).find(
+      ([cid, st]) => (st.player_name || "").trim().toLowerCase() === pending.target_name.trim().toLowerCase()
+    );
+    const targetTeam = targetChar ? CHARACTERS.find(c => c.id === targetChar[0]).team : null;
+    const hint = targetTeam
+      ? ` <span class="mono" style="color:${targetTeam === 'martian' ? 'var(--down)' : 'var(--muted)'}">(actually: ${targetTeam})</span>`
+      : "";
+    bodyHtml = `
+      <div class="phase-script-line">${current.name} wants to know: is <b>${pending.target_name}</b> a White Martian?${hint}</div>
+      <div style="display:flex; gap:10px; margin-top:12px">
+        <button class="btn-primary" style="width:auto;margin:0" onclick="answerInspect(true)">Yes</button>
+        <button class="btn-ghost" style="width:auto" onclick="answerInspect(false)">No</button>
+      </div>
+    `;
+  } else if (currentIsInvited) {
+    bodyHtml = `<div class="phase-script-line" style="opacity:.8">Waiting for ${current.name} to silently pick someone to inspect&hellip;</div>`;
+  } else {
+    bodyHtml = `
+      <div class="phase-script-line">${current.name} may silently ask Watchtower if another player is a White Martian.</div>
+      <button class="btn-primary" style="margin-top:10px" onclick="socket.emit('send_inspect_prompt', {id: '${current.id}'})">Send Inspect Prompt</button>
+    `;
+  }
+
+  linesEl.innerHTML = `
+    ${bodyHtml}
+    <div class="step-nav">
+      <span class="step-nav-count">${inspectStepIndex + 1} of ${inspectors.length}</span>
+      <div class="step-nav-buttons">
+        <button class="btn-ghost" style="width:auto" onclick="stepInspect(-1)" ${isFirst ? "disabled" : ""}>&larr; Back</button>
+        <button class="btn-ghost" style="width:auto" onclick="stepInspect(1)" ${isLast ? "disabled" : ""}>Next &rarr;</button>
+      </div>
+    </div>
+  `;
+}
+
+function stepInspect(delta) {
+  const inspectors = (latestState && latestState.eligible_inspectors) || [];
+  inspectStepIndex = Math.max(0, Math.min(inspectors.length - 1, inspectStepIndex + delta));
+  renderInspectWizard();
+}
+
+function answerInspect(answer) {
+  socket.emit("answer_watchtower", { answer });
+}
+
+function renderStepLine(lines) {
+  const linesEl = document.getElementById("phase-script-lines");
+  const isLast = stepIndex >= lines.length - 1;
+  const isFirst = stepIndex === 0;
+  linesEl.innerHTML = `
+    <div class="phase-script-line">${lines[stepIndex]}</div>
+    <div class="step-nav">
+      <span class="step-nav-count">${stepIndex + 1} of ${lines.length}</span>
+      <div class="step-nav-buttons">
+        <button class="btn-ghost" style="width:auto" onclick="stepPhaseLine(-1)" ${isFirst ? "disabled" : ""}>&larr; Back</button>
+        <button class="btn-primary" style="width:auto;margin:0" onclick="stepPhaseLine(1)" ${isLast ? "disabled" : ""}>Next &rarr;</button>
+      </div>
+    </div>
+  `;
+}
+
+function stepPhaseLine(delta) {
+  if (!latestState || !latestState.phase_script) return;
+  const lines = latestState.phase_script.lines;
+  stepIndex = Math.max(0, Math.min(lines.length - 1, stepIndex + delta));
+  renderStepLine(lines);
 }
 
 function closePhaseScript() {

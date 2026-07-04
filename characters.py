@@ -173,6 +173,69 @@ for _c in CHARACTERS:
 # ------------------------------------------------------------------------
 KRYPTONIAN_IDS = {"superman", "supergirl", "superboy", "krypto"}
 
+# ------------------------------------------------------------------------
+# "Know You Anywhere" and its many variants. Each entry is a LIST of
+# target specs, each either a literal character id (single target) or
+# "team:<team_name>" (know everyone currently active on that team).
+# Multiple specs can combine (The Spectre knows both Martians AND
+# Villains). Powers the Secret Identity phase: when triggered, each
+# knower (if active and assigned) privately learns which players are
+# behind every one of their resolved, active, assigned targets.
+#
+# Plastic Man's "Petty Thief" is deliberately excluded - it's a Super
+# Ability letting him look at a physical Secret Identity roster himself,
+# not a "knows a specific target" passive, same as Zatanna's and Granny
+# Goodness's "check the Secret Identity page" abilities.
+# ------------------------------------------------------------------------
+KNOWS_IDENTITY_OF = {
+    "steve_trevor": ["wonder_woman"],
+    "lois_lane": ["superman"],
+    "iris_west": ["the_flash"],
+    "joe_west": ["the_flash"],
+    "a_pennyworth": ["batman"],
+    "leslie_thompkins": ["batman"],
+    "martha_kent": ["superman"],
+    "jonathan_kent": ["superman"],
+    "pete_ross": ["superman"],
+    "lana_lang": ["superman"],
+    "robin": ["batman"],
+    "batgirl": ["batman"],
+    "kid_flash": ["the_flash"],
+    "jesse_quick": ["the_flash"],
+    "ares": ["wonder_woman"],
+    "maxima": ["superman"],
+    "vandal_savage": ["kendra_saunders"],
+    "ras_al-ghul": ["batman"],
+    "mr_mxyzptlk": ["superman"],
+    "bat-mite": ["batman"],
+    "mary_batson": ["captain_marvel"],
+    "freddie_freeman": ["captain_marvel"],
+    "martin_stein": ["jefferson_jackson"],
+    "jefferson_jackson": ["martin_stein"],
+    "dr_caitlin_snow": ["the_flash"],
+    "jimmy_olsen": ["superman"],
+
+    # Category reveals - whole team, not one person
+    "cat_grant": ["team:civilian"],
+    "perry_white": ["team:civilian"],
+    "james_gordon": ["team:villain"],
+    "martian_manhunter": ["team:martian"],
+    "krypto": ["team:hero"],
+    "streaky": ["team:hero"],
+    "dr_alchemy": ["team:bystander"],
+    "dr_harleen_quinzel": ["team:villain"],
+    "the_spectre": ["team:martian", "team:villain"],
+
+    # Named-subset, symmetric pair (Luthor <-> his inner circle)
+    "lex_luthor": ["miss_tessmacher", "otis", "mercy"],
+    "lena_luthor": ["miss_tessmacher", "otis", "mercy"],
+    "miss_tessmacher": ["lex_luthor", "lena_luthor"],
+    "otis": ["lex_luthor", "lena_luthor"],
+    "mercy": ["lex_luthor", "lena_luthor"],
+}
+for _c in CHARACTERS:
+    _c["knows_identity_of"] = KNOWS_IDENTITY_OF.get(_c["id"])
+
 HOSTAGE_ABILITIES = {
     "tobias_whale": "black_lightning",
     "reverse_flash": "the_flash",
@@ -358,7 +421,7 @@ for _c in CHARACTERS:
 # pack) whenever you decide where they belong.
 UNPACKED_CHARACTER_IDS = [c["id"] for c in CHARACTERS if c["pack"] is None]
 
-PHASES = ["Report", "Discuss", "Vote", "Accuse", "Rescue", "Eliminate", "Protect", "Inspect"]
+PHASES = ["Secret Identity", "Report", "Discuss", "Vote", "Accuse", "Rescue", "Eliminate", "Protect", "Inspect"]
 NUM_ROUNDS = 7
 
 # Short reference text for the player-facing "Rules & Phases" screen. These

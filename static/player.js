@@ -108,6 +108,55 @@ function closeGameOver() {
   hideOverlay("gameover-overlay");
 }
 
+// ---- ask Watchtower (silent Martian-check inspection) ----
+socket.on("inspect_prompt", (data) => {
+  const list = document.getElementById("inspect-candidate-list");
+  const candidates = data.candidates || [];
+  list.innerHTML = candidates.length
+    ? candidates.map(name => `<div class="hostage-target" data-name="${name}">${name}</div>`).join("")
+    : `<div class="empty">No one else is active right now.</div>`;
+  list.querySelectorAll(".hostage-target").forEach(el => {
+    el.addEventListener("click", () => submitInspectTarget(el.dataset.name));
+  });
+  showOverlay("inspect-prompt-overlay");
+});
+
+function submitInspectTarget(targetName) {
+  socket.emit("ask_watchtower", { asker: myName, target_name: targetName });
+  hideOverlay("inspect-prompt-overlay");
+  document.getElementById("inspect-waiting-target").textContent = targetName;
+  showOverlay("inspect-waiting-overlay");
+}
+
+socket.on("ask_watchtower_error", (data) => {
+  hideOverlay("inspect-waiting-overlay");
+  alert(data.message);
+});
+
+socket.on("inspection_answer", (data) => {
+  hideOverlay("inspect-waiting-overlay");
+  document.getElementById("inspect-answer-text").textContent =
+    data.answer ? `Yes, ${data.target_name} is a White Martian!` : `No, ${data.target_name} is not a White Martian.`;
+  showOverlay("inspect-answer-overlay");
+});
+
+function closeInspectAnswer() {
+  hideOverlay("inspect-answer-overlay");
+}
+
+// ---- secret identity reveal (Know You Anywhere) ----
+socket.on("secret_identity_reveal", (data) => {
+  const reveals = data.reveals || [];
+  document.getElementById("secret-identity-text").innerHTML = reveals
+    .map(r => `<div>${r.target_player} is ${r.target_name}</div>`)
+    .join("");
+  showOverlay("secret-identity-overlay");
+});
+
+function closeSecretIdentity() {
+  hideOverlay("secret-identity-overlay");
+}
+
 // ---- my card ----
 socket.on("my_card_result", (data) => {
   const body = document.getElementById("mycard-body");

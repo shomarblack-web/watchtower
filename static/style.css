@@ -174,14 +174,15 @@ body{
   box-shadow: 0 0 12px rgba(245,166,35,.55);
 }
 .led-phase{ width: auto; padding: 0 10px; font-size: 10px; letter-spacing:.06em; text-transform: uppercase; font-family:'Rajdhani',sans-serif; font-weight:700; }
-.host-page .led-phase[data-phase="0"]{ border-color: #e5484d55; }
-.host-page .led-phase[data-phase="1"]{ border-color: #f5a62355; }
-.host-page .led-phase[data-phase="2"]{ border-color: #f5d76e55; }
-.host-page .led-phase[data-phase="3"]{ border-color: #4fc97e55; }
-.host-page .led-phase[data-phase="4"]{ border-color: #4fc3f755; }
-.host-page .led-phase[data-phase="5"]{ border-color: #8b7ff055; }
-.host-page .led-phase[data-phase="6"]{ border-color: #c084fc55; }
-.host-page .led-phase[data-phase="7"]{ border-color: #ff8a5c55; }
+.host-page .led-phase[data-phase="0"]{ border-color: #c084fc55; }
+.host-page .led-phase[data-phase="1"]{ border-color: #e5484d55; }
+.host-page .led-phase[data-phase="2"]{ border-color: #f5a62355; }
+.host-page .led-phase[data-phase="3"]{ border-color: #f5d76e55; }
+.host-page .led-phase[data-phase="4"]{ border-color: #4fc97e55; }
+.host-page .led-phase[data-phase="5"]{ border-color: #4fc3f755; }
+.host-page .led-phase[data-phase="6"]{ border-color: #8b7ff055; }
+.host-page .led-phase[data-phase="7"]{ border-color: #c084fc55; }
+.host-page .led-phase[data-phase="8"]{ border-color: #ff8a5c55; }
 
 /* ---------- layout ---------- */
 .layout{ display:grid; grid-template-columns: 1fr 300px; gap: 16px; padding: 16px 20px; }
@@ -513,21 +514,15 @@ body{
   color: var(--text); padding: 10px 0; border-bottom: 1px dotted var(--line);
 }
 .phase-script-line:last-of-type{ border-bottom: none; }
-.checklist-heading{
-  font-family:'Rajdhani', sans-serif; text-transform: uppercase; letter-spacing:.1em;
-  font-size: 12px; color: var(--muted); margin: 16px 0 8px; padding-top: 10px;
-  border-top: 1px solid var(--line);
+.step-nav{
+  display: flex; align-items: center; justify-content: space-between;
+  margin-top: 10px; padding-top: 10px; border-top: 1px dotted var(--line);
 }
-.checklist-item{
-  display: flex; align-items: flex-start; gap: 10px; padding: 7px 0;
-  font-size: 14px; line-height: 1.4; cursor: pointer;
+.step-nav-count{
+  font-family:'JetBrains Mono', monospace; font-size: 12px; color: var(--muted);
 }
-.checklist-item input[type="checkbox"]{
-  margin-top: 3px; width: 16px; height: 16px; accent-color: var(--amber); flex-shrink: 0;
-}
-.checklist-item input:checked + span{
-  color: var(--muted); text-decoration: line-through;
-}
+.step-nav-buttons{ display: flex; gap: 8px; }
+.step-nav-buttons button:disabled{ opacity: .3; cursor: not-allowed; }
 .intro-text{ white-space: pre-line; line-height: 1.5; }
 .prompt-tag{
   font-family:'Rajdhani',sans-serif; font-size:9px; text-transform:uppercase;
@@ -552,7 +547,8 @@ body{
 .timer-controls .btn-ghost{ margin-top:0; }
 
 /* ---------- side panels ---------- */
-.feed-item{ font-size:12px; color: var(--muted); padding: 5px 0; border-bottom: 1px dotted var(--line); }
+.feed-item{ font-size:12px; color: var(--muted); padding: 3px 0; border-bottom: 1px dotted var(--line); }
+#activity{ max-height: 120px; overflow-y: auto; }
 .feed-item:last-child{ border-bottom:none; }
 
 .tally-row{ display:flex; justify-content: space-between; font-size:13px; padding:5px 0; border-bottom: 1px dotted var(--line); }
