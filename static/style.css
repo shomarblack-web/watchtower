@@ -278,7 +278,7 @@ body{
 
 .char-row{
   display:grid;
-  grid-template-columns: 22px 1fr 96px auto;
+  grid-template-columns: 22px 1fr auto;
   align-items:center;
   gap: 10px;
   padding: 7px 10px;
@@ -286,10 +286,14 @@ body{
   border-radius: 6px;
   background: var(--panel-raised);
   opacity: .55;
-  max-height: 200px;
+  max-height: 260px;
   overflow: hidden;
   transition: max-height .3s ease, opacity .25s ease, padding .3s ease,
               border-width .3s ease, margin .3s ease;
+}
+.char-controls{
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end;
+  gap: 6px;
 }
 .char-row.row-hidden{
   max-height: 0; opacity: 0; padding-top: 0; padding-bottom: 0;
@@ -443,7 +447,7 @@ body{
 .step-val.zero{ color: var(--down); }
 .step-val.max{ color: var(--amber); }
 
-.special-btn{ width: 100%; text-align:center; }
+.special-btn{ text-align:center; }
 .special-btn.sel{ background: var(--amber); color:#1a1305; border-color: var(--amber); }
 .manual-status-btn{ opacity: .55; font-size: 11px; }
 .manual-status-btn.sel{ opacity: 1; background: #e5484d; border-color: #e5484d; color: #fff; }

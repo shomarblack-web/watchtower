@@ -275,11 +275,8 @@ function buildCharRow(c) {
     socket.emit("set_player_name", { id: c.id, name: e.target.value });
   });
 
-  const mid = document.createElement("div");
-  mid.style.display = "flex";
-  mid.style.flexDirection = "column";
-  mid.style.gap = "4px";
-  mid.style.alignItems = "center";
+  const controls = document.createElement("div");
+  controls.className = "char-controls";
 
   if (c.has_health) {
     const health = document.createElement("div");
@@ -290,7 +287,7 @@ function buildCharRow(c) {
     health.querySelectorAll(".step-btn").forEach(b => {
       b.onclick = () => socket.emit("adjust_health", { id: c.id, delta: Number(b.dataset.d) });
     });
-    mid.appendChild(health);
+    controls.appendChild(health);
   }
 
   if (c.has_shield) {
@@ -302,8 +299,18 @@ function buildCharRow(c) {
     shield.querySelectorAll(".step-btn").forEach(b => {
       b.onclick = () => socket.emit("adjust_shield", { id: c.id, delta: Number(b.dataset.d) });
     });
-    mid.appendChild(shield);
+    controls.appendChild(shield);
   }
+
+  [["fury", "😠 Fury", "Mark as a Fury (Granny Goodness)"], ["starro", "🟣 Starro", "Mark as Starro-controlled"]].forEach(([field, label, tip]) => {
+    const btn = document.createElement("button");
+    btn.className = "action-btn special-btn manual-status-btn";
+    btn.dataset.field = field;
+    btn.textContent = label;
+    btn.title = tip;
+    btn.onclick = () => socket.emit("toggle_special", { id: c.id, field });
+    controls.appendChild(btn);
+  });
 
   [["has_cuffs", "cuffed", "Cuffs"], ["has_cure", "cured", "Cure"], ["has_fixit", "fixed", "Fix-it"]].forEach(([flag, field, label]) => {
     if (c[flag]) {
@@ -313,18 +320,8 @@ function buildCharRow(c) {
       btn.textContent = label;
       btn.title = TOOLTIPS[field];
       btn.onclick = () => socket.emit("toggle_special", { id: c.id, field });
-      mid.appendChild(btn);
+      controls.appendChild(btn);
     }
-  });
-
-  [["fury", "😠 Fury", "Mark as a Fury (Granny Goodness)"], ["starro", "🟣 Starro", "Mark as Starro-controlled"]].forEach(([field, label, tip]) => {
-    const btn = document.createElement("button");
-    btn.className = "action-btn special-btn manual-status-btn";
-    btn.dataset.field = field;
-    btn.textContent = label;
-    btn.title = tip;
-    btn.onclick = () => socket.emit("toggle_special", { id: c.id, field });
-    mid.appendChild(btn);
   });
 
   if (c.is_switchable) {
@@ -333,7 +330,7 @@ function buildCharRow(c) {
     revealBtn.title = `Reveal as ${c.reveal_name}`;
     revealBtn.textContent = "Reveal";
     revealBtn.onclick = () => socket.emit("reveal_character", { id: c.id });
-    mid.appendChild(revealBtn);
+    controls.appendChild(revealBtn);
   }
 
   if (c.has_hostage) {
@@ -342,14 +339,22 @@ function buildCharRow(c) {
     hostageBtn.title = "Let Fate Decide - take two players hostage";
     hostageBtn.textContent = "Take Hostage";
     hostageBtn.onclick = () => openHostageModal(c.id);
-    mid.appendChild(hostageBtn);
+    controls.appendChild(hostageBtn);
   }
 
-  const right = document.createElement("div");
-  right.style.display = "flex";
-  right.style.flexDirection = "column";
-  right.style.gap = "4px";
-  right.style.alignItems = "flex-end";
+  const actions = document.createElement("div");
+  actions.className = "action-row";
+  const ACTION_LABELS = { end: "ELM" };
+  c.actions.forEach(a => {
+    const btn = document.createElement("button");
+    btn.className = "action-btn" + (a === "deactivate" ? " deactivate" : "");
+    btn.dataset.action = a;
+    btn.textContent = ACTION_LABELS[a] || a;
+    btn.title = TOOLTIPS["action_" + a] || a;
+    btn.onclick = () => socket.emit("character_action", { id: c.id, action: a });
+    actions.appendChild(btn);
+  });
+  controls.appendChild(actions);
 
   const protWrap = document.createElement("div");
   protWrap.className = "prot-wrap";
@@ -368,27 +373,11 @@ function buildCharRow(c) {
   }
   protWrap.appendChild(protLabel);
   protWrap.appendChild(prot);
-
-  const actions = document.createElement("div");
-  actions.className = "action-row";
-  const ACTION_LABELS = { end: "ELM" };
-  c.actions.forEach(a => {
-    const btn = document.createElement("button");
-    btn.className = "action-btn" + (a === "deactivate" ? " deactivate" : "");
-    btn.dataset.action = a;
-    btn.textContent = ACTION_LABELS[a] || a;
-    btn.title = TOOLTIPS["action_" + a] || a;
-    btn.onclick = () => socket.emit("character_action", { id: c.id, action: a });
-    actions.appendChild(btn);
-  });
-
-  right.appendChild(protWrap);
-  right.appendChild(actions);
+  controls.appendChild(protWrap);
 
   row.appendChild(toggle);
   row.appendChild(nameWrap);
-  row.appendChild(mid);
-  row.appendChild(right);
+  row.appendChild(controls);
   return row;
 }
 
