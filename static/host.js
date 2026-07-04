@@ -648,11 +648,70 @@ function applyMapState(mapState) {
 
 buildMap();
 
+const TEAM_ICONS = {
+  civilian: { letter: "C", bg: "#f3aecb", fg: "#3a1a28" },
+  villain: { letter: "V", bg: "#2fbf6e", fg: "#0a2214" },
+  hero: { letter: "H", bg: "#3b7fe0", fg: "#ffffff" },
+  martian: { letter: "M", bg: "#9aa1ab", fg: "#1a1c1f" },
+};
+
+function letterBadgeSvg(letter, bg, fg, title) {
+  return `<svg viewBox="0 0 44 44" class="team-badge" title="${title}">
+    <circle cx="22" cy="22" r="21" fill="${bg}" stroke="#05070a" stroke-width="2"/>
+    <text x="22" y="30" text-anchor="middle" font-family="Rajdhani, sans-serif"
+          font-weight="800" font-size="22" fill="${fg}">${letter}</text>
+  </svg>`;
+}
+
+function kryptonianBadgeSvg() {
+  return `<svg viewBox="0 0 44 44" class="team-badge" title="Kryptonian">
+    <circle cx="22" cy="22" r="21" fill="#7dd3fc" stroke="#05070a" stroke-width="2"/>
+    <text x="22" y="30" text-anchor="middle" font-family="Rajdhani, sans-serif"
+          font-weight="800" font-size="22" fill="#062a3d">K</text>
+  </svg>`;
+}
+
+function furyBadgeSvg() {
+  return `<svg viewBox="0 0 44 44" class="team-badge" title="Fury">
+    <circle cx="22" cy="22" r="21" fill="#e5484d" stroke="#05070a" stroke-width="2"/>
+    <path d="M11 15 L18 18" stroke="#3a0508" stroke-width="2.5" stroke-linecap="round"/>
+    <path d="M33 15 L26 18" stroke="#3a0508" stroke-width="2.5" stroke-linecap="round"/>
+    <circle cx="16" cy="22" r="2.4" fill="#3a0508"/>
+    <circle cx="28" cy="22" r="2.4" fill="#3a0508"/>
+    <path d="M14 33 Q22 26 30 33" stroke="#3a0508" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  </svg>`;
+}
+
+function starroBadgeSvg() {
+  const cx = 22, cy = 22, rOuter = 20, rInner = 8;
+  const points = [];
+  for (let i = 0; i < 10; i++) {
+    const r = i % 2 === 0 ? rOuter : rInner;
+    const angle = (Math.PI / 5) * i - Math.PI / 2;
+    points.push(`${cx + r * Math.cos(angle)},${cy + r * Math.sin(angle)}`);
+  }
+  return `<svg viewBox="0 0 44 44" class="team-badge" title="Starro">
+    <polygon points="${points.join(" ")}" fill="#c084fc" stroke="#05070a" stroke-width="2" stroke-linejoin="round"/>
+  </svg>`;
+}
+
+function renderHostCardBadges(c, st) {
+  const el = document.getElementById("card-badges");
+  const badges = [];
+  const teamIcon = TEAM_ICONS[c ? c.team : null];
+  if (teamIcon) badges.push(letterBadgeSvg(teamIcon.letter, teamIcon.bg, teamIcon.fg, c.team));
+  if (c && c.is_kryptonian) badges.push(kryptonianBadgeSvg());
+  if (st && st.fury) badges.push(furyBadgeSvg());
+  if (st && st.starro) badges.push(starroBadgeSvg());
+  el.innerHTML = badges.join("");
+}
+
 // ---- character ability card ----
 function openCard(id) {
   const c = CHARACTERS.find(x => x.id === id);
   const card = CARDS[id];
   document.getElementById("card-name").textContent = c ? c.name : id;
+  renderHostCardBadges(c, latestState ? latestState.characters[id] : null);
 
   const body = document.getElementById("card-body");
   if (!card) {

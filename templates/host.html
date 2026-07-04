@@ -129,12 +129,15 @@
 </div>
 
 <div id="card-overlay" class="map-overlay" onclick="if(event.target===this) closeCard()">
-  <div class="card-modal">
-    <div class="map-modal-head">
-      <h3 style="margin:0" id="card-name">—</h3>
-      <button class="btn-ghost" style="width:auto;padding:6px 12px" onclick="closeCard()">Close</button>
+  <div class="card-modal kirby-frame">
+    <div class="kirby-inner">
+      <div class="map-modal-head">
+        <h3 style="margin:0" id="card-name">—</h3>
+        <button class="btn-ghost" style="width:auto;padding:6px 12px" onclick="closeCard()">Close</button>
+      </div>
+      <div id="card-badges" class="mycard-badges"></div>
+      <div id="card-body"></div>
     </div>
-    <div id="card-body"></div>
   </div>
 </div>
 
