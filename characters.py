@@ -173,6 +173,13 @@ for _c in CHARACTERS:
 # ------------------------------------------------------------------------
 KRYPTONIAN_IDS = {"superman", "supergirl", "superboy", "krypto"}
 
+# Broader than KRYPTONIAN_IDS above (which is scoped narrowly to "heroes who
+# can save a Kryptonian hostage"). This one is for the Kryptonian team icon
+# on player cards, so it includes villain-side Kryptonians too.
+KRYPTONIAN_TEAM_IDS = {"superman", "supergirl", "superboy", "krypto", "zod", "faora", "reign"}
+for _c in CHARACTERS:
+    _c["is_kryptonian"] = _c["id"] in KRYPTONIAN_TEAM_IDS
+
 # ------------------------------------------------------------------------
 # "Know You Anywhere" and its many variants. Each entry is a LIST of
 # target specs, each either a literal character id (single target) or

@@ -8,6 +8,19 @@ function hideOverlay(id) {
   document.getElementById(id).classList.remove("overlay-open");
 }
 
+// ---- ability text parser (KIND ABILITY[.:] Title[.!?…] Description) ----
+// Title-ending punctuation is "." (stripped - just a neutral sentence
+// end) or "!"/"?"/an ellipsis (kept - usually part of the title's own
+// flavor, e.g. "Zip!", "Bzz!", "Join Me…").
+function parseAbilityText(a) {
+  const m = a.match(/^([A-Z ]+ABILITY)[.:]\s*(.+?)(\.\.\.|\u2026|[.!?])\s*([\s\S]*)$/);
+  if (!m) return null;
+  const [, kind, titleBase, term, rawDesc] = m;
+  const keepTerm = term === "." ? "" : (term === "..." || term === "\u2026" ? "\u2026" : term);
+  const desc = rawDesc.replace(/^[.\s]+/, "");
+  return { kind, title: titleBase + keepTerm, desc };
+}
+
 let latestState = null;
 const collapsedTeams = new Set(["martian", "hero", "villain", "civilian", "sidekick", "bystander"]);
 const PACK_LABELS = Object.fromEntries(PACKS.map(p => [p.id, p.label]));
@@ -302,6 +315,16 @@ function buildCharRow(c) {
       btn.onclick = () => socket.emit("toggle_special", { id: c.id, field });
       mid.appendChild(btn);
     }
+  });
+
+  [["fury", "😠 Fury", "Mark as a Fury (Granny Goodness)"], ["starro", "🟣 Starro", "Mark as Starro-controlled"]].forEach(([field, label, tip]) => {
+    const btn = document.createElement("button");
+    btn.className = "action-btn special-btn manual-status-btn";
+    btn.dataset.field = field;
+    btn.textContent = label;
+    btn.title = tip;
+    btn.onclick = () => socket.emit("toggle_special", { id: c.id, field });
+    mid.appendChild(btn);
   });
 
   if (c.is_switchable) {
@@ -636,13 +659,12 @@ function openCard(id) {
     body.innerHTML = `<div class="empty">No card on file for this character.</div>`;
   } else {
     const abilityRows = (card.abilities || []).map(a => {
-      const m = a.match(/^([A-Z ]+ABILITY)\.\s*([^.]*)\.\s*(.*)$/);
-      if (m) {
-        const [, kind, title, desc] = m;
+      const parsed = parseAbilityText(a);
+      if (parsed) {
         return `<div class="ability-row">
-                  <div class="ability-kind">${kind}</div>
-                  <div class="ability-title">${title}</div>
-                  <div class="ability-desc">${desc}</div>
+                  <div class="ability-kind">${parsed.kind}</div>
+                  <div class="ability-title">${parsed.title}</div>
+                  <div class="ability-desc">${parsed.desc}</div>
                 </div>`;
       }
       return `<div class="ability-row"><div class="ability-desc">${a}</div></div>`;
@@ -894,6 +916,8 @@ let lastStepsPhase = null;
 let stepIndex = 0;
 let inspectStepIndex = 0;
 let lastInspectPhase = null;
+let protectStepIndex = 0;
+let lastProtectPhase = null;
 
 function renderPhaseScriptBody(script) {
   document.getElementById("phase-script-title").textContent = script.phase + "!";
@@ -901,13 +925,22 @@ function renderPhaseScriptBody(script) {
   const linesEl = document.getElementById("phase-script-lines");
 
   if (script.kind === "interactive" && script.phase === "Inspect") {
+    lastProtectPhase = null;
     if (script.phase !== lastInspectPhase) {
       lastInspectPhase = script.phase;
       inspectStepIndex = 0;
     }
     renderInspectWizard();
+  } else if (script.kind === "interactive" && script.phase === "Protect") {
+    lastInspectPhase = null;
+    if (script.phase !== lastProtectPhase) {
+      lastProtectPhase = script.phase;
+      protectStepIndex = 0;
+    }
+    renderProtectWizard();
   } else if (script.kind === "steps" && script.lines.length > 1) {
     lastInspectPhase = null;
+    lastProtectPhase = null;
     if (script.phase !== lastStepsPhase) {
       lastStepsPhase = script.phase;
       stepIndex = 0;
@@ -917,6 +950,7 @@ function renderPhaseScriptBody(script) {
   } else {
     lastStepsPhase = null;
     lastInspectPhase = null;
+    lastProtectPhase = null;
     linesEl.innerHTML = script.lines.length
       ? script.lines.map(line => `<div class="phase-script-line">${line}</div>`).join("")
       : `<div class="phase-script-line" style="opacity:.6">No line to read for this phase.</div>`;
@@ -930,6 +964,52 @@ function renderPhaseScriptBody(script) {
   if (script.phase === "Vote") {
     timerEl.innerHTML = `<button class="btn-primary" style="margin-top:14px" onclick="closePhaseScript(); openTimer(2*60, 'Vote!');">Start 2-minute timer</button>`;
   }
+}
+
+function renderProtectWizard() {
+  const linesEl = document.getElementById("phase-script-lines");
+  const protectors = (latestState && latestState.eligible_protectors) || [];
+
+  if (!protectors.length) {
+    linesEl.innerHTML = `<div class="phase-script-line" style="opacity:.6">No active character currently has a Protect/Shield ability.</div>`;
+    return;
+  }
+  if (protectStepIndex >= protectors.length) protectStepIndex = protectors.length - 1;
+  const current = protectors[protectStepIndex];
+  const isFirst = protectStepIndex === 0;
+  const isLast = protectStepIndex >= protectors.length - 1;
+  const invitedId = latestState.active_protector_cid;
+  const currentIsInvited = invitedId === current.id;
+
+  let bodyHtml;
+  if (currentIsInvited) {
+    bodyHtml = `<div class="phase-script-line" style="opacity:.8">Waiting for ${current.name} to silently choose someone to protect&hellip;</div>`;
+  } else {
+    const selfNote = current.can_self_protect
+      ? " (may choose themselves)"
+      : "";
+    bodyHtml = `
+      <div class="phase-script-line">${current.name} may choose one player to shield this round${selfNote}.</div>
+      <button class="btn-primary" style="margin-top:10px" onclick="socket.emit('send_protect_prompt', {id: '${current.id}'})">Send Protect Prompt</button>
+    `;
+  }
+
+  linesEl.innerHTML = `
+    ${bodyHtml}
+    <div class="step-nav">
+      <span class="step-nav-count">${protectStepIndex + 1} of ${protectors.length}</span>
+      <div class="step-nav-buttons">
+        <button class="btn-ghost" style="width:auto" onclick="stepProtect(-1)" ${isFirst ? "disabled" : ""}>&larr; Back</button>
+        <button class="btn-ghost" style="width:auto" onclick="stepProtect(1)" ${isLast ? "disabled" : ""}>Next &rarr;</button>
+      </div>
+    </div>
+  `;
+}
+
+function stepProtect(delta) {
+  const protectors = (latestState && latestState.eligible_protectors) || [];
+  protectStepIndex = Math.max(0, Math.min(protectors.length - 1, protectStepIndex + delta));
+  renderProtectWizard();
 }
 
 function renderInspectWizard() {

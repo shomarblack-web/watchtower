@@ -35,7 +35,7 @@
     "role": "TYPE - Hero, Protector",
     "abilities": [
       "PASSIVE ABILITY. Run for Your Life. Player must be targeted twice for elimination.",
-      "ACTIVE ABILITY: Fastest Man Alive. Target one player. Player switches seats with target. (Protect!)",
+      "ACTIVE ABILITY. Fastest Man Alive. Target one player. Player switches seats with target. (Protect!)",
       "SUPER ABILITY. Altering the Timeline. Player may cancel results of previous Vote! Phase, and initiate new Vote! Phase. (Rescue!)"
     ],
     "strategy": "STRATEGY: Keep White Martians out of the Watchtower. Protect Civilians from elimination."
@@ -119,7 +119,7 @@
     "abilities": [
       "PASSIVE ABILITY. Reincarnation. If Eliminated, player returns to game after one round.",
       "ACTIVE ABILITY. Nth Metal Mace. At start of Accuse! phase, target one player. Target cannot Accuse! this phase.",
-      "ACTIVE ABILITY. Nth Metal Harness - Can move self plus one  target to Thanagar.",
+      "ACTIVE ABILITY. Nth Metal Harness. Can move self plus one target to Thanagar.",
       "ACTIVE ABILITY. Timeless Love. During Inspect phase, target one player. If that player is Kendra Saunders, that player is now HAWKWOMAN."
     ],
     "strategy": "STRATEGY: Negate Villains. Find Kendra."
@@ -207,7 +207,7 @@
     "role": "TYPE - Villain",
     "abilities": [
       "PASSIVE ABILITY. The Main Man. If Lobo exposes any combination of three Civilians, Heroes, or Martians then Lobo wins the game.",
-      "ACTIVE ABILITY. Expert Tracker. Once per round Main Man can accuse one player of being a specific type.",
+      "ACTIVE ABILITY. Expert Tracker. Once per round Lobo can accuse one player of being a specific type.",
       "SUPER ABILITY. Space Hog.  Player may move to any zone. (Rescue!)"
     ],
     "strategy": "STRATEGY: Expose a Hero, Martian, or Civilian."
@@ -737,7 +737,7 @@
     "signal": "SIGNAL - meow",
     "role": "TYPE - Hero, Protector",
     "abilities": [
-      "wrap = 500, IVE ABILITY. Team Mascot. Player knows the identity of all Heroes.",
+      "PASSIVE ABILITY. Team Mascot. Player knows the identity of all Heroes.",
       "PASSIVE ABILITY. What is It, Boy?. Player may only communicate using their signal.",
       "PASSIVE ABILITY. Loyal Companion. Player cannot be Exposed! Player is only eliminated when all from HOUSE OF EL are eliminated.",
       "ACTIVE ABILITY. Cat of Steel. Player may shield one player. (Protect!)"
@@ -824,8 +824,8 @@
       "PASSIVE ABILITY. True Form. During Secret Identity phase and Eliminate phase, player is considered White Martian.",
       "PASSIVE ABILITY. Telepathy. Miss Martian can lie to anyone but White Martians during Accuse! phase.",
       "ACTIVE ABILITY. Telepathic Shield. During Eliminate phase, target one player. That player is shielded from elimination.",
-      "ACTIVE ABILITY. Telepathic Link. During Inspect! phase, Martian Manhunter may self-identify to one player. That player must then signal their role to Martian Manhunter (10s).",
-      "SUPER ABILITY. Telepathic Team.  During Inspect! phase, Martian Manhunter may signal Watchtower to reveal Telepathically Linked characters to each other."
+      "ACTIVE ABILITY. Telepathic Link. During Inspect! phase, Miss Martian may self-identify to one player. That player must then signal their role to Miss Martian (10s).",
+      "SUPER ABILITY. Telepathic Team.  During Inspect! phase, Miss Martian may signal Watchtower to reveal Telepathically Linked characters to each other."
     ],
     "strategy": "STRATEGY: Negate White Martians."
   },

@@ -129,6 +129,30 @@
   </div>
 </div>
 
+<div id="protect-prompt-overlay" class="map-overlay">
+  <div class="card-modal kirby-frame">
+    <div class="kirby-inner">
+      <div class="reveal-label">Choose Who to Shield</div>
+      <p style="color:var(--muted); font-size:13px">
+        Silently pick a player to protect this round.
+      </p>
+      <div id="protect-candidate-list" class="hostage-target-list"></div>
+    </div>
+  </div>
+</div>
+
+<div id="protect-confirm-overlay" class="map-overlay">
+  <div class="reveal-modal kirby-frame">
+    <div class="kirby-inner">
+      <div class="reveal-label">Choice Locked In</div>
+      <div class="reveal-name" id="protect-confirm-text" style="font-size:22px">—</div>
+      <div class="reveal-buttons">
+        <button class="btn-ghost" onclick="closeProtectConfirm()">Got it</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="inspect-waiting-overlay" class="map-overlay">
   <div class="reveal-modal kirby-frame">
     <div class="kirby-inner">
@@ -170,6 +194,7 @@
         <h3 style="margin:0" id="mycard-name">—</h3>
         <button class="btn-ghost" style="width:auto;padding:6px 12px" onclick="closeMyCard()">Close</button>
       </div>
+      <div id="mycard-badges" class="mycard-badges"></div>
       <div id="mycard-body"></div>
     </div>
   </div>

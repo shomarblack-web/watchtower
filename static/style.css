@@ -445,6 +445,9 @@ body{
 
 .special-btn{ width: 100%; text-align:center; }
 .special-btn.sel{ background: var(--amber); color:#1a1305; border-color: var(--amber); }
+.manual-status-btn{ opacity: .55; font-size: 11px; }
+.manual-status-btn.sel{ opacity: 1; background: #e5484d; border-color: #e5484d; color: #fff; }
+.manual-status-btn[data-field="starro"].sel{ background: #c084fc; border-color: #c084fc; color: #1a0f2e; }
 
 /* ---------- DCEU map ---------- */
 .map-overlay{
@@ -491,6 +494,8 @@ body{
   font-family:'Rajdhani',sans-serif; font-size:12px; letter-spacing:.08em;
   text-transform: uppercase; color: var(--muted); margin-bottom: 4px;
 }
+.mycard-badges{ display: flex; gap: 8px; margin: 4px 0 10px; }
+.team-badge{ width: 34px; height: 34px; flex-shrink: 0; filter: drop-shadow(0 2px 3px rgba(0,0,0,.4)); }
 .ability-list{ margin-top: 12px; display:flex; flex-direction:column; gap:10px; }
 .ability-row{
   border-left: 3px solid var(--amber); padding: 4px 0 4px 10px;

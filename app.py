@@ -116,6 +116,13 @@ def fresh_character_state():
             "eliminated": False,
             "rescued": False,
             "targeted": False,
+            # Manual toggles for now, supporting the new Fury/Starro card
+            # icons - the full "Granny converts targets into Furies" and
+            # "Starro creates minions" mechanics are still deferred (per
+            # the Hive redesign conversation), so the host sets these by
+            # hand until that's built.
+            "fury": False,
+            "starro": False,
         }
     return state
 
@@ -145,6 +152,7 @@ GAME = {
     "timer": None,
     "pending_inspection": None,
     "active_inspector_cid": None,
+    "active_protector_cid": None,
 }
 
 
@@ -218,6 +226,15 @@ def eliminate_candidates():
         if st["active"] and st.get("player_name")
         and CHARACTERS_BY_ID.get(cid, {}).get("team") != "martian"
     ]
+
+
+def can_self_protect(cid):
+    """True if this character's Protect ability explicitly allows shielding
+    themselves (Wonder Girl, Zatanna), not just other players."""
+    for a in ABILITY_PHASE_MAP.get(cid, {}).get("Protect", []):
+        if "shield self" in a.lower() or "protect self" in a.lower():
+            return True
+    return False
 
 
 def has_martian_inspect_ability(cid):
@@ -311,6 +328,18 @@ def eligible_inspectors():
         for cid, st in GAME["characters"].items()
         if st["active"] and has_martian_inspect_ability(cid)
         and _visible_phase_abilities(cid, "Inspect")
+    ]
+
+
+def eligible_protectors():
+    """Active, shield-unlocked characters whose ability is currently
+    visible - powers the host's Protect-phase wizard."""
+    return [
+        {"id": cid, "name": display_name_for(cid), "can_self_protect": can_self_protect(cid)}
+        for cid, st in GAME["characters"].items()
+        if st["active"] and CHARACTERS_BY_ID.get(cid, {}).get("has_shield")
+        and st.get("shield") is not None
+        and _visible_phase_abilities(cid, "Protect")
     ]
 
 
@@ -485,20 +514,7 @@ def render_phase_script():
         ]}
 
     elif phase == "Protect":
-        shield_actors = [
-            cid for cid, st in GAME["characters"].items()
-            if st["active"] and CHARACTERS_BY_ID.get(cid, {}).get("has_shield")
-            and st.get("shield") is not None  # skip switch characters not yet revealed
-        ]
-        if shield_actors:
-            lines = [
-                f"{display_name_for(cid)}, open your eyes. Choose one other player "
-                f"to shield... All right, now close your eyes."
-                for cid in shield_actors
-            ]
-        else:
-            lines = ["No active character currently has a Protect/Shield ability."]
-        result = {"phase": "Protect", "kind": "steps", "lines": lines}
+        result = {"phase": "Protect", "kind": "interactive", "lines": []}
 
     elif phase == "Inspect":
         result = {"phase": "Inspect", "kind": "interactive", "lines": []}
@@ -561,6 +577,8 @@ def public_state(reveal_names):
         state["pending_inspection"] = GAME["pending_inspection"]
         state["active_inspector_cid"] = GAME["active_inspector_cid"]
         state["eligible_inspectors"] = eligible_inspectors()
+        state["active_protector_cid"] = GAME["active_protector_cid"]
+        state["eligible_protectors"] = eligible_protectors()
     return state
 
 
@@ -935,6 +953,8 @@ def on_set_phase(data):
     if old_phase == "Inspect" and (idx is None or PHASES[idx] != "Inspect"):
         GAME["pending_inspection"] = None
         GAME["active_inspector_cid"] = None
+    if old_phase == "Protect" and (idx is None or PHASES[idx] != "Protect"):
+        GAME["active_protector_cid"] = None
     GAME["phase_index"] = idx
     if idx is not None:
         log_activity(f"Phase: {PHASES[idx]}!")
@@ -1054,13 +1074,14 @@ def on_recharge_shields():
 
 @socketio.on("toggle_special")
 def on_toggle_special(data):
-    """Generic toggle for cuffs / cure / fixit style on-off abilities."""
+    """Generic toggle for cuffs / cure / fixit / fury / starro style on-off flags."""
     cid, field = data["id"], data["field"]
     st = GAME["characters"].get(cid)
-    if not st or field not in ("cuffed", "cured", "fixed") or st.get(field) is None:
+    if not st or field not in ("cuffed", "cured", "fixed", "fury", "starro") or st.get(field) is None:
         return
     st[field] = not st[field]
-    label = {"cuffed": "Cuffed", "cured": "Cured", "fixed": "Fixed"}[field]
+    label = {"cuffed": "Cuffed", "cured": "Cured", "fixed": "Fixed",
+              "fury": "Fury", "starro": "Starro"}[field]
     log_activity(f"{CHARACTERS_BY_ID[cid]['name']}: {label} {'ON' if st[field] else 'off'}")
     broadcast()
 
@@ -1340,10 +1361,15 @@ def on_get_my_card(data):
             a for a in card.get("abilities", [])
             if _ability_visible_to_player(a, revealed)
         ]
+    st = GAME["characters"].get(cid, {})
     socketio.emit("my_card_result", {
         "assigned": True,
         "character": display_name_for(cid),
         "card": card,
+        "team": char.get("team"),
+        "is_kryptonian": char.get("is_kryptonian", False),
+        "fury": bool(st.get("fury")),
+        "starro": bool(st.get("starro")),
     }, room=request.sid)
 
 
@@ -1409,6 +1435,67 @@ def on_send_inspect_prompt(data):
             "candidates": active_player_names(exclude_name=pname)
         }, room=sid)
     log_activity(f"{display_name_for(cid)} was invited to ask Watchtower a question")
+    broadcast()
+
+
+@socketio.on("send_protect_prompt")
+def on_send_protect_prompt(data):
+    """Host invites a specific eligible Hero to choose who to protect this
+    phase - only that character's player can submit a target until it's
+    resolved or the host moves to someone else."""
+    cid = data.get("id")
+    st = GAME["characters"].get(cid)
+    char = CHARACTERS_BY_ID.get(cid)
+    if not st or not st["active"] or not char or not char.get("has_shield") or st.get("shield") is None:
+        return
+    phase = PHASES[GAME["phase_index"]] if GAME["phase_index"] is not None else None
+    if phase != "Protect":
+        return
+    if not _visible_phase_abilities(cid, "Protect"):
+        return  # locked Super Ability before Round 3
+    GAME["active_protector_cid"] = cid
+    pname = (st.get("player_name") or "").strip()
+    sid = _sid_for_player(pname) if pname else None
+    if sid:
+        candidates = active_player_names(exclude_name=None if can_self_protect(cid) else pname)
+        socketio.emit("protect_prompt", {
+            "candidates": candidates,
+            "can_self_protect": can_self_protect(cid),
+        }, room=sid)
+    log_activity(f"{display_name_for(cid)} was invited to choose someone to protect")
+    broadcast()
+
+
+@socketio.on("submit_protect_target")
+def on_submit_protect_target(data):
+    """A Hero's player privately submits who they want to protect. Fills
+    the first open protection slot for that target. If the target already
+    has all 3 slots full this round, the Hero is never told - only the
+    host sees a notification, per the game's silent-protector design."""
+    protector_name = (data.get("protector") or "").strip()
+    target_name = (data.get("target_name") or "").strip()
+    if not protector_name or not target_name:
+        return
+    protector_cid = find_player_character_id(protector_name)
+    if not protector_cid or protector_cid != GAME["active_protector_cid"]:
+        return  # host hasn't invited this character to protect right now
+    target_cid = find_player_character_id(target_name)
+    if not target_cid or not GAME["characters"][target_cid]["active"]:
+        return
+    GAME["active_protector_cid"] = None
+    target_st = GAME["characters"][target_cid]
+    protector_display = display_name_for(protector_cid)
+    target_display = display_name_for(target_cid)
+    if False in target_st["protection"]:
+        target_st["protection"][target_st["protection"].index(False)] = True
+        log_activity(f"{protector_display} protected {target_display}")
+    else:
+        socketio.emit("character_limit_error", {
+            "message": f"{protector_display} tried to protect {target_display}, but "
+                       f"their protection is already full this round. {protector_display}'s "
+                       f"player was not told this failed."
+        }, room="hosts")
+        log_activity(f"{protector_display} tried to protect {target_display} - already full")
     broadcast()
 
 
@@ -1519,6 +1606,7 @@ def on_new_game():
     GAME["game_over"] = None
     GAME["pending_inspection"] = None
     GAME["active_inspector_cid"] = None
+    GAME["active_protector_cid"] = None
     # Player roster is left exactly as the host set it up via the New Game
     # dialog (remove/add/remove-all) - no automatic repopulation here.
     log_activity("New game started")

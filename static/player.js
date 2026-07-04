@@ -8,6 +8,19 @@ function hideOverlay(id) {
   document.getElementById(id).classList.remove("overlay-open");
 }
 
+// ---- ability text parser (KIND ABILITY[.:] Title[.!?…] Description) ----
+// Title-ending punctuation is "." (stripped - just a neutral sentence
+// end) or "!"/"?"/an ellipsis (kept - usually part of the title's own
+// flavor, e.g. "Zip!", "Bzz!", "Join Me…").
+function parseAbilityText(a) {
+  const m = a.match(/^([A-Z ]+ABILITY)[.:]\s*(.+?)(\.\.\.|\u2026|[.!?])\s*([\s\S]*)$/);
+  if (!m) return null;
+  const [, kind, titleBase, term, rawDesc] = m;
+  const keepTerm = term === "." ? "" : (term === "..." || term === "\u2026" ? "\u2026" : term);
+  const desc = rawDesc.replace(/^[.\s]+/, "");
+  return { kind, title: titleBase + keepTerm, desc };
+}
+
 let myName = localStorage.getItem("watchtower_name") || "";
 let myVote = null;
 let latestState = null;
@@ -144,6 +157,34 @@ function closeInspectAnswer() {
   hideOverlay("inspect-answer-overlay");
 }
 
+// ---- Protect phase - silently choose who to shield ----
+socket.on("protect_prompt", (data) => {
+  const list = document.getElementById("protect-candidate-list");
+  const candidates = data.candidates || [];
+  const items = candidates.length
+    ? candidates.map(name => {
+        const label = name.trim().toLowerCase() === myName.trim().toLowerCase() ? `${name} (yourself)` : name;
+        return `<div class="hostage-target" data-name="${name}">${label}</div>`;
+      }).join("")
+    : `<div class="empty">No one else is active right now.</div>`;
+  list.innerHTML = items;
+  list.querySelectorAll(".hostage-target").forEach(el => {
+    el.addEventListener("click", () => submitProtectTarget(el.dataset.name));
+  });
+  showOverlay("protect-prompt-overlay");
+});
+
+function submitProtectTarget(targetName) {
+  socket.emit("submit_protect_target", { protector: myName, target_name: targetName });
+  hideOverlay("protect-prompt-overlay");
+  document.getElementById("protect-confirm-text").textContent = `You chose to shield ${targetName}.`;
+  showOverlay("protect-confirm-overlay");
+}
+
+function closeProtectConfirm() {
+  hideOverlay("protect-confirm-overlay");
+}
+
 // ---- secret identity reveal (Know You Anywhere) ----
 socket.on("secret_identity_reveal", (data) => {
   const reveals = data.reveals || [];
@@ -158,22 +199,82 @@ function closeSecretIdentity() {
 }
 
 // ---- my card ----
+const TEAM_ICONS = {
+  civilian: { letter: "C", bg: "#f3aecb", fg: "#3a1a28" },
+  villain: { letter: "V", bg: "#2fbf6e", fg: "#0a2214" },
+  hero: { letter: "H", bg: "#3b7fe0", fg: "#ffffff" },
+  martian: { letter: "M", bg: "#9aa1ab", fg: "#1a1c1f" },
+};
+
+function letterBadgeSvg(letter, bg, fg, title) {
+  return `<svg viewBox="0 0 44 44" class="team-badge" title="${title}">
+    <circle cx="22" cy="22" r="21" fill="${bg}" stroke="#05070a" stroke-width="2"/>
+    <text x="22" y="30" text-anchor="middle" font-family="Rajdhani, sans-serif"
+          font-weight="800" font-size="22" fill="${fg}">${letter}</text>
+  </svg>`;
+}
+
+function kryptonianBadgeSvg() {
+  return `<svg viewBox="0 0 44 44" class="team-badge" title="Kryptonian">
+    <circle cx="22" cy="22" r="21" fill="#7dd3fc" stroke="#05070a" stroke-width="2"/>
+    <text x="22" y="30" text-anchor="middle" font-family="Rajdhani, sans-serif"
+          font-weight="800" font-size="22" fill="#062a3d">K</text>
+  </svg>`;
+}
+
+function furyBadgeSvg() {
+  return `<svg viewBox="0 0 44 44" class="team-badge" title="Fury">
+    <circle cx="22" cy="22" r="21" fill="#e5484d" stroke="#05070a" stroke-width="2"/>
+    <path d="M11 15 L18 18" stroke="#3a0508" stroke-width="2.5" stroke-linecap="round"/>
+    <path d="M33 15 L26 18" stroke="#3a0508" stroke-width="2.5" stroke-linecap="round"/>
+    <circle cx="16" cy="22" r="2.4" fill="#3a0508"/>
+    <circle cx="28" cy="22" r="2.4" fill="#3a0508"/>
+    <path d="M14 33 Q22 26 30 33" stroke="#3a0508" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  </svg>`;
+}
+
+function starroBadgeSvg() {
+  const cx = 22, cy = 22, rOuter = 20, rInner = 8;
+  const points = [];
+  for (let i = 0; i < 10; i++) {
+    const r = i % 2 === 0 ? rOuter : rInner;
+    const angle = (Math.PI / 5) * i - Math.PI / 2;
+    points.push(`${cx + r * Math.cos(angle)},${cy + r * Math.sin(angle)}`);
+  }
+  return `<svg viewBox="0 0 44 44" class="team-badge" title="Starro">
+    <polygon points="${points.join(" ")}" fill="#c084fc" stroke="#05070a" stroke-width="2" stroke-linejoin="round"/>
+  </svg>`;
+}
+
+function renderCardBadges(data) {
+  const el = document.getElementById("mycard-badges");
+  const badges = [];
+  const teamIcon = TEAM_ICONS[data.team];
+  if (teamIcon) {
+    badges.push(letterBadgeSvg(teamIcon.letter, teamIcon.bg, teamIcon.fg, data.team));
+  }
+  if (data.is_kryptonian) badges.push(kryptonianBadgeSvg());
+  if (data.fury) badges.push(furyBadgeSvg());
+  if (data.starro) badges.push(starroBadgeSvg());
+  el.innerHTML = badges.join("");
+}
+
 socket.on("my_card_result", (data) => {
   const body = document.getElementById("mycard-body");
   document.getElementById("mycard-name").textContent = data.assigned ? data.character : "No character yet";
+  renderCardBadges(data.assigned ? data : {});
   if (!data.assigned) {
     body.innerHTML = `<div class="empty">You haven't been assigned a character yet — ask your host to shuffle.</div>`;
     return;
   }
   const card = data.card || {};
   const abilityRows = (card.abilities || []).map(a => {
-    const m = a.match(/^([A-Z ]+ABILITY)\.\s*([^.]*)\.\s*(.*)$/);
-    if (m) {
-      const [, kind, title, desc] = m;
+    const parsed = parseAbilityText(a);
+    if (parsed) {
       return `<div class="ability-row">
-                <div class="ability-kind">${kind}</div>
-                <div class="ability-title">${title}</div>
-                <div class="ability-desc">${desc}</div>
+                <div class="ability-kind">${parsed.kind}</div>
+                <div class="ability-title">${parsed.title}</div>
+                <div class="ability-desc">${parsed.desc}</div>
               </div>`;
     }
     return `<div class="ability-row"><div class="ability-desc">${a}</div></div>`;
@@ -218,8 +319,8 @@ socket.on("phase_reminder", (data) => {
   }
   document.getElementById("phase-toast-title").textContent = `${data.phase}! — ${data.character}`;
   document.getElementById("phase-toast-body").innerHTML = data.abilities.map(a => {
-    const m = a.match(/^([A-Z ]+ABILITY)\.\s*([^.]*)\.\s*(.*)$/);
-    return m ? `<div><b>${m[2]}</b> — ${m[3]}</div>` : `<div>${a}</div>`;
+    const parsed = parseAbilityText(a);
+    return parsed ? `<div><b>${parsed.title}</b> — ${parsed.desc}</div>` : `<div>${a}</div>`;
   }).join("");
   toast.style.display = "block";
 });
