@@ -242,6 +242,28 @@ function closeAlchemyConfirm() {
   hideOverlay("alchemy-confirm-overlay");
 }
 
+// ---- Citizen's Arrest / Forget the Rules ----
+socket.on("arrest_prompt", (data) => {
+  const list = document.getElementById("arrest-candidate-list");
+  const candidates = data.candidates || [];
+  list.innerHTML = candidates.length
+    ? candidates.map(name => `<div class="hostage-target" data-name="${name}">${name}</div>`).join("")
+    : `<div class="empty">No one else is active right now.</div>`;
+  list.querySelectorAll(".hostage-target").forEach(el => {
+    el.addEventListener("click", () => {
+      socket.emit("submit_arrest_target", { arrester: myName, target_name: el.dataset.name });
+      hideOverlay("arrest-prompt-overlay");
+      document.getElementById("arrest-confirm-text").textContent = `You arrested ${el.dataset.name}.`;
+      showOverlay("arrest-confirm-overlay");
+    });
+  });
+  showOverlay("arrest-prompt-overlay");
+});
+
+function closeArrestConfirm() {
+  hideOverlay("arrest-confirm-overlay");
+}
+
 // ---- secret identity reveal (Know You Anywhere) ----
 socket.on("secret_identity_reveal", (data) => {
   const reveals = data.reveals || [];

@@ -750,7 +750,7 @@
     "abilities": [
       "PASSIVE ABILITY. Hello Bruce. Player knows the identity of Batman.",
       "PASSIVE ABILITY. Trained by Batman. Player may lie for Batman. (Accuse!)",
-      "ACTIVE ABILITY. Forget the Rules. During Inspect! phase, target one player. That player loses all abilities for one round."
+      "ACTIVE ABILITY. Forget the Rules. During Inspect! phase, target one player. That player loses all abilities for one round. (Inspect!)"
     ],
     "strategy": "STRATEGY: Protect Batman."
   },
@@ -760,7 +760,7 @@
     "abilities": [
       "PASSIVE ABILITY. Hello Bruce. Player knows the identity of Batman.",
       "PASSIVE ABILITY. Trained by Batman. Player may lie for Batman. (Accuse!)",
-      "ACTIVE ABILITY. Forget the Rules. During Inspect! phase, target one player. That player loses all abilities for one round."
+      "ACTIVE ABILITY. Forget the Rules. During Inspect! phase, target one player. That player loses all abilities for one round. (Inspect!)"
     ],
     "strategy": "STRATEGY: Protect Batman."
   },

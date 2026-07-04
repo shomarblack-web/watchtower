@@ -1,5 +1,33 @@
 # White Martian — Watchtower (Web Edition)
 
+## New: Arrested! condition (Citizen's Arrest / Forget the Rules)
+
+Built and tested end-to-end across a real round transition. Host sends a
+prompt (Inspect! phase only) for James Gordon, Maggie Sawyer, Robin, or
+Batgirl; their player privately picks any active player; the target gets
+an immediate "Arrested!" alert, then a phase-specific reminder each time
+a restricted phase comes up next round, and the restriction auto-clears
+once that round passes.
+
+**Found and fixed a real bug along the way**: Robin and Batgirl's
+"Forget the Rules" ability wasn't tagged for Inspect! at all — its card
+text said "During Inspect! phase" instead of the standard trailing
+"(Inspect!)" every other ability uses, so my auto-tagger never picked it
+up and the Send Arrest Prompt button silently did nothing for them.
+Fixed by adding the standard tag to the end of the ability text.
+
+**These two abilities aren't actually the same restriction**, despite
+looking similar:
+- James Gordon / Maggie Sawyer's **Citizen's Arrest** blocks Discuss,
+  Vote, and Accuse specifically — matches your example exactly.
+- Robin / Batgirl's **Forget the Rules** is broader — it blocks *every*
+  ability the target has, confirmed via a live test that their normal
+  phase reminder came back empty during the restricted round.
+
+Also confirmed: since Inspect is the last phase in the round order, the
+restriction applies to the *next* round's phases (this round's have
+already happened) — flagged in case that's not what you intended.
+
 ## New: four character-specific mechanics
 
 All four built and tested end-to-end against a live server (real

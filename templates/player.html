@@ -214,6 +214,28 @@
   </div>
 </div>
 
+<div id="arrest-prompt-overlay" class="map-overlay">
+  <div class="card-modal kirby-frame">
+    <div class="kirby-inner">
+      <div class="reveal-label">Citizen's Arrest</div>
+      <p style="color:var(--muted); font-size:13px">Pick a player to arrest.</p>
+      <div id="arrest-candidate-list" class="hostage-target-list"></div>
+    </div>
+  </div>
+</div>
+
+<div id="arrest-confirm-overlay" class="map-overlay">
+  <div class="reveal-modal kirby-frame">
+    <div class="kirby-inner">
+      <div class="reveal-label">Arrested</div>
+      <div class="reveal-name" id="arrest-confirm-text" style="font-size:20px">—</div>
+      <div class="reveal-buttons">
+        <button class="btn-ghost" onclick="closeArrestConfirm()">Got it</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="inspect-waiting-overlay" class="map-overlay">
   <div class="reveal-modal kirby-frame">
     <div class="kirby-inner">

@@ -130,6 +130,13 @@ def fresh_character_state():
             # grants a Protect-phase shield or Eliminate-phase vote to
             # whoever it's set on, regardless of their normal team/kit.
             "alchemy_type": None,
+            # Citizen's Arrest / Forget the Rules: "phases" (can't Discuss/
+            # Vote/Accuse) or "all_abilities" (loses every ability), for
+            # whichever round number is in arrested_for_round - cleared
+            # automatically once the game moves past that round.
+            "arrested_scope": None,
+            "arrested_for_round": None,
+            "arrested_by": None,
         }
     return state
 
@@ -164,6 +171,7 @@ GAME = {
     "active_absorber_cid": None,
     "active_alchemist_cid": None,
     "pending_alchemy": None,
+    "active_arrester_cid": None,
 }
 
 
@@ -188,6 +196,47 @@ def display_name_for(cid):
 
 
 _ABILITY_TYPE_RE = re.compile(r"type:?\s*(civilian|hero|villain)", re.IGNORECASE)
+
+# James Gordon and Maggie Sawyer's "Citizen's Arrest" blocks Discuss/Vote/
+# Accuse specifically. Robin, Batgirl, and Zatanna's abilities are broader -
+# they block every ability the target has. Same underlying "Arrested!"
+# condition and mechanical enforcement either way, but each ability gets
+# its own flavor text so it stays specific and fun rather than generic.
+ARREST_INFO = {
+    "james_gordon": {
+        "scope": "phases",
+        "title": "Citizen's Arrest!",
+        "alert": "You've been placed under Citizen's Arrest! You may NOT "
+                 "Discuss, Vote, or Accuse next round.",
+        "reminder": "You're still under Citizen's Arrest - you may NOT {phase} this round.",
+    },
+    "maggie_sawyer": {
+        "scope": "phases",
+        "title": "Citizen's Arrest!",
+        "alert": "You've been placed under Citizen's Arrest! You may NOT "
+                 "Discuss, Vote, or Accuse next round.",
+        "reminder": "You're still under Citizen's Arrest - you may NOT {phase} this round.",
+    },
+    "robin": {
+        "scope": "all_abilities",
+        "title": "Bat-Cuffed!",
+        "alert": "You've been bat-cuffed! You lose access to all your abilities next round!",
+        "reminder": "You're still bat-cuffed - no abilities this round.",
+    },
+    "batgirl": {
+        "scope": "all_abilities",
+        "title": "Bat-Cuffed!",
+        "alert": "You've been bat-cuffed! You lose access to all your abilities next round!",
+        "reminder": "You're still bat-cuffed - no abilities this round.",
+    },
+    "zatanna": {
+        "scope": "all_abilities",
+        "title": "You are a rabbit!",
+        "alert": "Zatanna's spell has turned you into a rabbit! You cannot "
+                 "use any of your abilities next round.",
+        "reminder": "You're still a rabbit - no abilities this round.",
+    },
+}
 
 
 def _ability_visible_to_player(ability_text, revealed):
@@ -598,6 +647,8 @@ def public_state(reveal_names):
         state["lobo_tracker"] = GAME["lobo_tracker"]
         state["active_absorber_cid"] = GAME["active_absorber_cid"]
         state["active_alchemist_cid"] = GAME["active_alchemist_cid"]
+        state["active_arrester_cid"] = GAME["active_arrester_cid"]
+        state["eligible_arresters"] = eligible_arresters()
     return state
 
 
@@ -827,18 +878,58 @@ def _visible_phase_abilities(cid, phase_name):
     return abilities
 
 
+def current_arrest_scope(cid):
+    """The Arrested! scope in effect for this character right now, if
+    any - None once the round it applied to has passed."""
+    st = GAME["characters"].get(cid, {})
+    if st.get("arrested_scope") and st.get("arrested_for_round") == GAME["round"]:
+        return st["arrested_scope"]
+    return None
+
+
 def push_phase_reminders():
     """Privately nudge each player whose character has an ability tagged
-    for the phase that's currently active."""
+    for the phase that's currently active. Suppressed entirely for anyone
+    currently under the "all_abilities" Arrested! restriction."""
     phase_name = PHASES[GAME["phase_index"]] if GAME["phase_index"] is not None else None
     for sid, name in PLAYER_SIDS.items():
         cid = find_player_character_id(name)
         abilities = _visible_phase_abilities(cid, phase_name)
+        if cid and current_arrest_scope(cid) == "all_abilities":
+            abilities = []
         socketio.emit("phase_reminder", {
             "phase": phase_name,
             "character": CHARACTERS_BY_ID[cid]["name"] if cid else None,
             "abilities": abilities,
         }, room=sid)
+
+
+PHASES_BLOCKED_BY_ARREST = {"Discuss", "Vote", "Accuse"}
+
+
+def push_arrest_reminders():
+    """At the start of every phase, remind anyone currently Arrested! of
+    the specific restriction that applies right now, using the same
+    flavor text as whichever ability caught them."""
+    phase_name = PHASES[GAME["phase_index"]] if GAME["phase_index"] is not None else None
+    if not phase_name:
+        return
+    for sid, name in PLAYER_SIDS.items():
+        cid = find_player_character_id(name)
+        if not cid:
+            continue
+        scope = current_arrest_scope(cid)
+        if not scope:
+            continue
+        arrester_cid = GAME["characters"].get(cid, {}).get("arrested_by")
+        info = ARREST_INFO.get(arrester_cid, {})
+        title = info.get("title", "Arrested!")
+        if scope == "phases" and phase_name in PHASES_BLOCKED_BY_ARREST:
+            body = info.get("reminder", "You may NOT {phase} this round.").format(phase=phase_name)
+            socketio.emit("condition_alert", {"title": title, "body": body}, room=sid)
+        elif scope == "all_abilities" and _visible_phase_abilities(cid, phase_name):
+            body = info.get("reminder", "You have no abilities this round.")
+            socketio.emit("condition_alert", {"title": title, "body": body}, room=sid)
 
 
 def broadcast():
@@ -954,6 +1045,11 @@ def on_set_round(data):
 
     if new_round != old_round:
         push_condition_recap()
+        for st in GAME["characters"].values():
+            if st.get("arrested_for_round") is not None and new_round > st["arrested_for_round"]:
+                st["arrested_scope"] = None
+                st["arrested_for_round"] = None
+                st["arrested_by"] = None
 
     if new_round >= 3 and not GAME["super_abilities_announced"]:
         GAME["super_abilities_announced"] = True
@@ -995,6 +1091,7 @@ def on_set_phase(data):
         GAME["active_inspector_cid"] = None
         GAME["active_alchemist_cid"] = None
         GAME["pending_alchemy"] = None
+        GAME["active_arrester_cid"] = None
     if old_phase == "Protect" and (idx is None or PHASES[idx] != "Protect"):
         GAME["active_protector_cid"] = None
     if old_phase == "Accuse" and (idx is None or PHASES[idx] != "Accuse"):
@@ -1010,6 +1107,7 @@ def on_set_phase(data):
     broadcast()
     push_phase_reminders()
     push_phase_guide()
+    push_arrest_reminders()
     if idx is not None and PHASES[idx] == "Secret Identity":
         push_secret_identity_reveals()
 
@@ -1657,6 +1755,69 @@ def on_submit_alchemy_choice(data):
     broadcast()
 
 
+def eligible_arresters():
+    """Active characters who can apply the Arrested! condition, whose
+    ability is currently visible."""
+    return [
+        {"id": cid, "name": display_name_for(cid), "scope": ARREST_INFO[cid]["scope"]}
+        for cid, st in GAME["characters"].items()
+        if cid in ARREST_INFO and st["active"]
+        and _visible_phase_abilities(cid, "Inspect")
+    ]
+
+
+@socketio.on("send_arrest_prompt")
+def on_send_arrest_prompt(data):
+    """Host invites James Gordon/Maggie Sawyer/Robin/Batgirl/Zatanna to
+    silently pick a player to arrest - only usable during Inspect!."""
+    cid = data.get("id")
+    st = GAME["characters"].get(cid)
+    if not st or not st["active"] or cid not in ARREST_INFO:
+        return
+    phase = PHASES[GAME["phase_index"]] if GAME["phase_index"] is not None else None
+    if phase != "Inspect":
+        return
+    if not _visible_phase_abilities(cid, "Inspect"):
+        return
+    GAME["active_arrester_cid"] = cid
+    pname = (st.get("player_name") or "").strip()
+    sid = _sid_for_player(pname) if pname else None
+    if sid:
+        socketio.emit("arrest_prompt", {
+            "candidates": active_player_names(exclude_name=pname)
+        }, room=sid)
+    log_activity(f"{display_name_for(cid)} was invited to arrest a player")
+    broadcast()
+
+
+@socketio.on("submit_arrest_target")
+def on_submit_arrest_target(data):
+    """The arresting player privately submits who to target. Applies the
+    Arrested! condition, effective starting next round, and immediately
+    alerts the target with the specific, flavorful restriction text tied
+    to whichever ability caught them."""
+    arrester_name = (data.get("arrester") or "").strip()
+    target_name = (data.get("target_name") or "").strip()
+    if not arrester_name or not target_name:
+        return
+    arrester_cid = find_player_character_id(arrester_name)
+    if not arrester_cid or arrester_cid != GAME["active_arrester_cid"]:
+        return
+    target_cid = find_player_character_id(target_name)
+    target_st = GAME["characters"].get(target_cid)
+    if not target_cid or not target_st or not target_st["active"]:
+        return
+    info = ARREST_INFO[arrester_cid]
+    target_st["arrested_scope"] = info["scope"]
+    target_st["arrested_by"] = arrester_cid
+    target_st["arrested_for_round"] = GAME["round"] + 1
+    GAME["active_arrester_cid"] = None
+    log_activity(f"{display_name_for(arrester_cid)} arrested {display_name_for(target_cid)} "
+                 f"({'Discuss/Vote/Accuse blocked' if info['scope'] == 'phases' else 'all abilities blocked'} next round)")
+    push_condition_alert(target_cid, info["title"], info["alert"])
+    broadcast()
+
+
 @socketio.on("send_protect_prompt")
 def on_send_protect_prompt(data):
     """Host invites a specific eligible Hero to choose who to protect this
@@ -1833,6 +1994,7 @@ def on_new_game():
     GAME["active_absorber_cid"] = None
     GAME["active_alchemist_cid"] = None
     GAME["pending_alchemy"] = None
+    GAME["active_arrester_cid"] = None
     # Player roster is left exactly as the host set it up via the New Game
     # dialog (remove/add/remove-all) - no automatic repopulation here.
     log_activity("New game started")

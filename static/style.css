@@ -379,6 +379,7 @@ body{
 .condition-eliminated{ color: var(--down); border: 1px solid var(--down); background: rgba(239,85,104,.10); }
 .condition-rescued{ color: var(--alive); border: 1px solid var(--alive); background: rgba(79,201,126,.10); }
 .condition-targeted{ color: #ff8a5c; border: 1px solid #ff8a5c; background: rgba(255,138,92,.10); }
+.condition-arrested{ color: #e5484d; border: 1px solid #e5484d; background: rgba(229,72,77,.12); }
 .hostage-modal{ max-width: 440px; }
 .hostage-target-list{ display:flex; flex-direction:column; gap:6px; max-height: 260px; overflow-y:auto; }
 .hostage-target{

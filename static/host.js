@@ -364,6 +364,15 @@ function buildCharRow(c) {
     controls.appendChild(absorbBtn);
   }
 
+  if (["james_gordon", "maggie_sawyer", "robin", "batgirl", "zatanna"].includes(c.id)) {
+    const arrestBtn = document.createElement("button");
+    arrestBtn.className = "action-btn reveal-btn";
+    arrestBtn.title = "Send a list of active players to arrest (Inspect! phase only)";
+    arrestBtn.textContent = "Send Arrest Prompt";
+    arrestBtn.onclick = () => socket.emit("send_arrest_prompt", { id: c.id });
+    controls.appendChild(arrestBtn);
+  }
+
   if (c.id === "dr_alchemy") {
     const alchemyBtn = document.createElement("button");
     alchemyBtn.className = "action-btn reveal-btn";
@@ -509,6 +518,17 @@ socket.on("state", (state) => {
         : "Take a player hostage";
     }
 
+    const furyBtn = row.querySelector('.manual-status-btn[data-field="fury"]');
+    if (furyBtn) {
+      const grannyActive = !!(state.characters.granny_goodness && state.characters.granny_goodness.active);
+      furyBtn.style.display = grannyActive ? "" : "none";
+    }
+    const starroBtn = row.querySelector('.manual-status-btn[data-field="starro"]');
+    if (starroBtn) {
+      const starroActive = !!(state.characters.starro && state.characters.starro.active);
+      starroBtn.style.display = starroActive ? "" : "none";
+    }
+
     let hostageBadge = row.querySelector(".hostage-badge");
     if (st.hostage) {
       if (!hostageBadge) {
@@ -543,6 +563,22 @@ socket.on("state", (state) => {
         badge.remove();
       }
     });
+
+    const isArrested = st.arrested_scope && st.arrested_for_round === state.round;
+    let arrestBadge = row.querySelector(".condition-badge.condition-arrested");
+    if (isArrested) {
+      if (!arrestBadge) {
+        arrestBadge = document.createElement("span");
+        arrestBadge.className = "condition-badge condition-arrested";
+        arrestBadge.textContent = "🚨 Arrested";
+        row.querySelector(".char-name").appendChild(arrestBadge);
+      }
+      arrestBadge.title = st.arrested_scope === "phases"
+        ? "Can't Discuss/Vote/Accuse this round"
+        : "Loses all abilities this round";
+    } else if (arrestBadge) {
+      arrestBadge.remove();
+    }
 
     const healthVal = row.querySelector('[data-role="health"]');
     if (healthVal) {
