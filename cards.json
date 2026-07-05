@@ -276,7 +276,7 @@
     "role": "TYPE - Villain",
     "abilities": [
       "ACTIVE ABILITY. One Down. Target one player. Player takes target hostage (Batman). (10s).",
-      "ACTIVE ABILITY. Mad Love. Target one player. Player accuses target of being Dr. Harleen Quinzel. (Accuse!)",
+      "ACTIVE ABILITY. Mad Love. During Accuse! phase, target one player. If that player is Dr. Harleen Quinzel, that player is now HARLEY QUINN.",
       "SUPER ABILITY. Name. Description. (Phase!)"
     ],
     "strategy": "STRATEGY: Expose Batman. Find Harley"

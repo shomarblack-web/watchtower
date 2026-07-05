@@ -495,6 +495,17 @@ function buildCharRow(c) {
     controls.appendChild(stompBtn);
   }
 
+  if (["hawkman", "joker"].includes(c.id)) {
+    const wakeBtn = document.createElement("button");
+    wakeBtn.className = "action-btn reveal-btn";
+    wakeBtn.title = c.id === "hawkman"
+      ? "Let Hawkman guess who Kendra Saunders is (Inspect! phase)"
+      : "Let Joker guess who Dr. Harleen Quinzel is (Accuse! phase)";
+    wakeBtn.textContent = "Send Wake Prompt";
+    wakeBtn.onclick = () => socket.emit("send_wake_prompt", { id: c.id });
+    controls.appendChild(wakeBtn);
+  }
+
   if (["martian_manhunter", "miss_martian"].includes(c.id)) {
     const linkBtn = document.createElement("button");
     linkBtn.className = "action-btn reveal-btn";

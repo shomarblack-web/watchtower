@@ -184,6 +184,7 @@ GAME = {
     "pending_gl_reveals": [],
     "plastic_man_shielded": [],
     "spectre_triggered": False,
+    "active_wake_cid": None,
     "active_good_doctor_cid": None,
     "good_doctor_requests": {},
     "active_telepathy_cid": None,
@@ -309,6 +310,29 @@ def secret_roster_available(cid):
 # they block every ability the target has. Same underlying "Arrested!"
 # condition and mechanical enforcement either way, but each ability gets
 # its own flavor text so it stays specific and fun rather than generic.
+# Hawkman's Timeless Love and Joker's Mad Love both work the same way:
+# the player silently picks someone from the active roster, the system
+# tells them privately whether they guessed right, and if so, the target
+# is automatically revealed (Civilian -> Hero/Villain) and told directly.
+WAKE_INFO = {
+    "hawkman": {
+        "target_cid": "kendra_saunders",
+        "phase": "Inspect",
+        "correct_msg": "Yes, this is your immortal love, Hawkgirl.",
+        "incorrect_msg": "No, this is not your immortal love.",
+        "target_alert_title": "Reawakened!",
+        "target_alert_body": "You have been reawakened as Hawkgirl!",
+    },
+    "joker": {
+        "target_cid": "dr_harleen_quinzel",
+        "phase": "Accuse",
+        "correct_msg": "This is your Mad Love.",
+        "incorrect_msg": "This is not your Mad Love.",
+        "target_alert_title": "Mad Love!",
+        "target_alert_body": "Your eyes have been opened to the madness. Life is just a joke now.",
+    },
+}
+
 ARREST_INFO = {
     "james_gordon": {
         "scope": "phases",
@@ -389,10 +413,18 @@ def log_activity(text):
 
 
 def vote_tally():
-    """Tally by real player name now (not character id) - see cast_vote."""
+    """Tally by real player name now (not character id) - see cast_vote.
+    Roulette's vote counts as 5 during Vote! phase specifically (Play
+    the Odds) - she's a villain so this never applies during Eliminate!
+    anyway, but the phase check keeps it precise either way."""
     tally = {}
-    for target_name in GAME["votes"].values():
-        tally[target_name] = tally.get(target_name, 0) + 1
+    current_phase = PHASES[GAME["phase_index"]] if GAME["phase_index"] is not None else None
+    roulette_player = (GAME["characters"].get("roulette", {}).get("player_name") or "").strip().lower()
+    for voter_name, target_name in GAME["votes"].items():
+        weight = 1
+        if current_phase == "Vote" and roulette_player and voter_name.strip().lower() == roulette_player:
+            weight = 5
+        tally[target_name] = tally.get(target_name, 0) + weight
     return sorted(tally.items(), key=lambda kv: -kv[1])
 
 
@@ -1534,6 +1566,75 @@ def on_reveal_character(data):
                 }, room=sid)
 
 
+@socketio.on("send_wake_prompt")
+def on_send_wake_prompt(data):
+    """Host invites Hawkman/Joker to silently pick who they think their
+    target is - only usable during their ability's own phase."""
+    cid = data.get("id")
+    info = WAKE_INFO.get(cid)
+    if not info:
+        return
+    st = GAME["characters"].get(cid)
+    if not st or not st["active"]:
+        return
+    current_phase = PHASES[GAME["phase_index"]] if GAME["phase_index"] is not None else None
+    if current_phase != info["phase"]:
+        return
+    GAME["active_wake_cid"] = cid
+    pname = (st.get("player_name") or "").strip()
+    sid = _sid_for_player(pname) if pname else None
+    if sid:
+        socketio.emit("wake_prompt", {
+            "candidates": active_player_names(exclude_name=pname)
+        }, room=sid)
+    log_activity(f"{display_name_for(cid)} was invited to pick who to wake")
+    broadcast()
+
+
+@socketio.on("submit_wake_target")
+def on_submit_wake_target(data):
+    """The waking player privately submits their guess. If correct, the
+    target is revealed and told directly; if not, only the guesser is
+    told they got it wrong - the target never finds out they were checked."""
+    waker_name = (data.get("waker") or "").strip()
+    target_name = (data.get("target_name") or "").strip()
+    if not waker_name or not target_name:
+        return
+    waker_cid = find_player_character_id(waker_name)
+    info = WAKE_INFO.get(waker_cid)
+    if not info or waker_cid != GAME["active_wake_cid"]:
+        return
+    target_cid = find_player_character_id(target_name)
+    if not target_cid:
+        return
+    GAME["active_wake_cid"] = None
+    waker_sid = _sid_for_player(waker_name)
+    if target_cid != info["target_cid"]:
+        log_activity(f"{display_name_for(waker_cid)} guessed wrong trying to wake someone")
+        if waker_sid:
+            socketio.emit("condition_alert", {"title": "No Luck", "body": info["incorrect_msg"]}, room=waker_sid)
+        broadcast()
+        return
+    target_st = GAME["characters"][target_cid]
+    char = CHARACTERS_BY_ID[target_cid]
+    if not target_st["revealed"]:
+        target_st["revealed"] = True
+        if char["has_shield"] and target_st["shield"] is None:
+            target_st["shield"] = SHIELD_START
+    log_activity(f"{display_name_for(waker_cid)} correctly woke {char['name']} - revealed as {char['reveal_name']}!")
+    if waker_sid:
+        socketio.emit("condition_alert", {"title": "Awakened!", "body": info["correct_msg"]}, room=waker_sid)
+    target_sid = _sid_for_player(target_name)
+    if target_sid:
+        socketio.emit("shuffle_reveal", {
+            "character": display_name_for(target_cid), "id": target_cid,
+        }, room=target_sid)
+        socketio.emit("condition_alert", {
+            "title": info["target_alert_title"], "body": info["target_alert_body"],
+        }, room=target_sid)
+    broadcast()
+
+
 @socketio.on("take_hostage")
 def on_take_hostage(data):
     """A villain takes a player hostage. If their card names a counterpart
@@ -1726,6 +1827,33 @@ def check_spectre_transformation(eliminated_cid):
     )
 
 
+# Mr. Mxyzptlk exposing Superman, or Bat-Mite exposing Batman, is loud
+# and public - everyone but the exposer themselves hears the catchphrase.
+GADFLY_EXPOSERS = {
+    "superman": {"exposer_cid": "mr_mxyzptlk", "catchphrase": "Wowza!"},
+    "batman": {"exposer_cid": "bat-mite", "catchphrase": "Holy rusted metal!"},
+}
+
+
+def announce_gadfly_exposure(cid):
+    info = GADFLY_EXPOSERS.get(cid)
+    if not info:
+        return
+    exposer_st = GAME["characters"].get(info["exposer_cid"])
+    if not exposer_st or not exposer_st["active"]:
+        return
+    exposed_st = GAME["characters"][cid]
+    player_name = (exposed_st.get("player_name") or "").strip()
+    if not player_name:
+        return
+    exposer_pname = (exposer_st.get("player_name") or "").strip().lower()
+    message = f"{info['catchphrase']} {player_name} is {display_name_for(cid)}!"
+    for sid, name in PLAYER_SIDS.items():
+        if name.strip().lower() != exposer_pname:
+            socketio.emit("condition_alert", {"title": "Exposed!", "body": message}, room=sid)
+    log_activity(message)
+
+
 @socketio.on("character_action")
 def on_character_action(data):
     cid, action = data["id"], data["action"]
@@ -1756,6 +1884,8 @@ def on_character_action(data):
                 push_condition_alert(cid, cond["title"], cond["body"])
                 if action == "end":
                     check_spectre_transformation(cid)
+                if action == "expose":
+                    announce_gadfly_exposure(cid)
         if action == "end":
             check_house_of_el_condition()
     broadcast()

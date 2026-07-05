@@ -432,6 +432,25 @@ function submitThunderChoice(direction) {
   hideOverlay("thunder-prompt-overlay");
 }
 
+// ---- Hawkman's Timeless Love / Joker's Mad Love - guess who it is.
+// Results (correct or not) arrive via the existing condition_alert and
+// shuffle_reveal handlers already wired up elsewhere - nothing more
+// needed here beyond showing the candidate list. ----
+socket.on("wake_prompt", (data) => {
+  const list = document.getElementById("wake-candidate-list");
+  const candidates = data.candidates || [];
+  list.innerHTML = candidates.length
+    ? candidates.map(name => `<div class="hostage-target" data-name="${name}">${name}</div>`).join("")
+    : `<div class="empty">No one else is active right now.</div>`;
+  list.querySelectorAll(".hostage-target").forEach(el => {
+    el.addEventListener("click", () => {
+      socket.emit("submit_wake_target", { waker: myName, target_name: el.dataset.name });
+      hideOverlay("wake-prompt-overlay");
+    });
+  });
+  showOverlay("wake-prompt-overlay");
+});
+
 // ---- Secret Identity roster view (Plastic Man's Petty Thief, Zatanna's
 // Thgiels fo Dnah) - view-only, auto-dismisses after 10 seconds ----
 let secretRosterTimer = null;
