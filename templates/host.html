@@ -39,6 +39,7 @@
   <div class="brand">WHITE MARTIAN <span>&reg;</span><small>WATCHTOWER — HOST CONSOLE</small></div>
   <div style="display:flex; align-items:center; gap:12px">
     <button class="btn-ghost" style="width:auto;margin:0;padding:8px 14px" title="Narration scripts" onclick="openPrompts()">Prompts</button>
+    <button class="btn-ghost" style="width:auto;margin:0;padding:8px 14px" title="Search every character's full card" onclick="openCardopedia()">Cardopedia</button>
     <div class="mono" id="conn-status" style="font-size:12px;color:var(--muted)">connecting…</div>
   </div>
 </div>
@@ -171,6 +172,19 @@
       <button class="btn-ghost" style="width:auto;padding:6px 12px" onclick="closePrompts()">Close</button>
     </div>
     <div id="prompts-body"></div>
+  </div>
+</div>
+
+<div id="cardopedia-overlay" class="map-overlay" onclick="if(event.target===this) closeCardopedia()">
+  <div class="card-modal">
+    <div class="map-modal-head">
+      <h3 style="margin:0">Cardopedia</h3>
+      <button class="btn-ghost" style="width:auto;padding:6px 12px" onclick="closeCardopedia()">Close</button>
+    </div>
+    <input type="text" id="cardopedia-search" placeholder="Search for a character…" autocomplete="off"
+           style="width:100%; background:#0d131c; border:1px solid var(--line); border-radius:6px; color:var(--text); padding:10px 12px; font-size:14px; margin-bottom:10px;">
+    <div id="cardopedia-results" class="hostage-target-list"></div>
+    <div id="cardopedia-detail"></div>
   </div>
 </div>
 

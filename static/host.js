@@ -477,6 +477,24 @@ function buildCharRow(c) {
     controls.appendChild(swapBtn);
   }
 
+  if (c.id === "reverse_flash") {
+    const rfBtn = document.createElement("button");
+    rfBtn.className = "action-btn reveal-btn";
+    rfBtn.title = "Send a list of Teleport-targeted players for Reverse Flash to swap seats with (Rescue! phase only)";
+    rfBtn.textContent = "Send Not So Fast Prompt";
+    rfBtn.onclick = () => socket.emit("send_reverse_flash_prompt", { id: c.id });
+    controls.appendChild(rfBtn);
+  }
+
+  if (c.id === "thunder") {
+    const stompBtn = document.createElement("button");
+    stompBtn.className = "action-btn reveal-btn";
+    stompBtn.title = "Let Thunder choose Left or Right for Stomp (Inspect! phase, Round 3+)";
+    stompBtn.textContent = "Send Stomp Prompt";
+    stompBtn.onclick = () => socket.emit("send_thunder_prompt", { id: c.id });
+    controls.appendChild(stompBtn);
+  }
+
   if (["martian_manhunter", "miss_martian"].includes(c.id)) {
     const linkBtn = document.createElement("button");
     linkBtn.className = "action-btn reveal-btn";
@@ -605,6 +623,7 @@ socket.on("state", (state) => {
     row.classList.toggle("spotlight", spotlightSet.has(c.id) && !locked);
     const nameInput = row.querySelector("input");
     if (document.activeElement !== nameInput) nameInput.value = st.player_name || "";
+    nameInput.classList.toggle("spectre-transformed-name", !!st.spectre_transformed);
 
     const nameLink = row.querySelector(".char-name-link");
     if (nameLink && st.display_name) nameLink.textContent = st.display_name;
@@ -1280,6 +1299,98 @@ function openPrompts() {
 function closePrompts() {
   hideOverlay("prompts-overlay");
 }
+
+// ---- Cardopedia - host-facing searchable reference, plain text only
+// (no colored badges - "Affiliation: Kryptonian" instead of a K icon) ----
+function parseAbilityTextPlain(a) {
+  const m = a.match(/^([A-Z ]+ABILITY)[.:]\s*(.+?)(\.\.\.|\u2026|[.!?])\s*([\s\S]*)$/);
+  if (!m) return { kind: "", title: "", desc: a };
+  const [, kind, titleBase, term, rawDesc] = m;
+  const keepTerm = term === "." ? "" : (term === "..." || term === "\u2026" ? "\u2026" : term);
+  const desc = rawDesc.replace(/^[.\s]+/, "");
+  return { kind, title: titleBase + keepTerm, desc };
+}
+
+function openCardopedia() {
+  document.getElementById("cardopedia-search").value = "";
+  document.getElementById("cardopedia-results").innerHTML = "";
+  document.getElementById("cardopedia-detail").innerHTML = `
+    <div class="empty" style="margin-top:12px">Start typing a character's name above.</div>
+  `;
+  showOverlay("cardopedia-overlay");
+  setTimeout(() => document.getElementById("cardopedia-search").focus(), 100);
+}
+
+function closeCardopedia() {
+  hideOverlay("cardopedia-overlay");
+}
+
+function renderCardopediaResults(query) {
+  const results = document.getElementById("cardopedia-results");
+  const q = query.trim().toLowerCase();
+  if (!q) {
+    results.innerHTML = "";
+    return;
+  }
+  const matches = CHARACTERS.filter(c => c.name.toLowerCase().includes(q));
+  results.innerHTML = matches.length
+    ? matches.map(c => `<div class="hostage-target" data-id="${c.id}">${c.name}</div>`).join("")
+    : `<div class="empty">No character matches "${query}".</div>`;
+  results.querySelectorAll(".hostage-target").forEach(el => {
+    el.addEventListener("click", () => renderCardopediaDetail(el.dataset.id));
+  });
+}
+
+function renderCardopediaDetail(id) {
+  const c = CHARACTERS.find(x => x.id === id);
+  const card = CARDS[id];
+  const detail = document.getElementById("cardopedia-detail");
+  if (!c || !card) {
+    detail.innerHTML = `<div class="empty">No card on file for this character.</div>`;
+    return;
+  }
+  const affiliations = [];
+  if (c.is_kryptonian) affiliations.push("Kryptonian");
+  if (c.is_speedster) affiliations.push("Speedster");
+  if (c.is_house_of_el) affiliations.push("House of El");
+
+  const metaLines = [
+    `Name: ${c.name}${c.is_switchable ? ` (reveals as ${c.reveal_name})` : ""}`,
+    `Team: ${c.team ? c.team.charAt(0).toUpperCase() + c.team.slice(1) : "Unknown"}`,
+    `Pack: ${PACK_LABELS[c.pack] || c.pack || "Unassigned"}`,
+    card.signal ? `Signal: ${card.signal.replace(/^signal\s*[-:]\s*/i, "")}` : null,
+    card.role ? `Type: ${card.role.replace(/^type\s*-\s*/i, "")}` : null,
+    `Affiliation: ${affiliations.length ? affiliations.join(", ") : "None"}`,
+  ].filter(Boolean);
+
+  const abilitiesHtml = (card.abilities || []).map(a => {
+    const parsed = parseAbilityTextPlain(a);
+    return `
+      <div class="ability-row">
+        <div class="ability-kind">${parsed.kind}</div>
+        <div class="ability-title">${parsed.title}</div>
+        <div class="ability-desc">${parsed.desc}</div>
+      </div>
+    `;
+  }).join("");
+
+  detail.innerHTML = `
+    <div class="cardopedia-meta" style="margin-top:14px; line-height:1.9; font-size:14px;">
+      ${metaLines.map(l => `<div>${l}</div>`).join("")}
+    </div>
+    <div class="ability-list" style="margin-top:14px;">
+      ${abilitiesHtml || '<div class="empty">No abilities on file.</div>'}
+    </div>
+    ${card.strategy ? `<div class="card-strategy" style="margin-top:14px;">${card.strategy}</div>` : ""}
+  `;
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  const searchInput = document.getElementById("cardopedia-search");
+  if (searchInput) {
+    searchInput.addEventListener("input", (e) => renderCardopediaResults(e.target.value));
+  }
+});
 
 // ---- phase script popup (what Watchtower says aloud) ----
 function openPhaseScript(script) {

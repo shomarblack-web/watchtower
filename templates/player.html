@@ -348,6 +348,35 @@
   </div>
 </div>
 
+<div id="reverse-flash-prompt-overlay" class="map-overlay">
+  <div class="card-modal kirby-frame">
+    <div class="kirby-inner">
+      <div class="reveal-label">Not So Fast</div>
+      <p style="color:var(--muted); font-size:13px">
+        Pick a Teleport-targeted player to swap seats with. Everyone will
+        see this happen, and you'll teleport straight to Watchtower.
+      </p>
+      <div id="reverse-flash-candidate-list" class="hostage-target-list"></div>
+    </div>
+  </div>
+</div>
+
+<div id="thunder-prompt-overlay" class="map-overlay">
+  <div class="reveal-modal kirby-frame">
+    <div class="kirby-inner">
+      <div class="reveal-label">Stomp</div>
+      <p style="color:var(--muted); font-size:13px">
+        Choose a side. Up to five players there won't be able to
+        Discuss, Accuse, or Vote next round.
+      </p>
+      <div class="reveal-buttons">
+        <button class="btn-primary" onclick="submitThunderChoice('left')">Left</button>
+        <button class="btn-primary" onclick="submitThunderChoice('right')">Right</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 
 <div id="secret-roster-overlay" class="map-overlay">
   <div class="card-modal kirby-frame">

@@ -406,6 +406,32 @@ function submitPlasticManChoice(direction) {
   hideOverlay("plastic-man-prompt-overlay");
 }
 
+// ---- Reverse Flash's Not So Fast - seat swap with a Teleport target ----
+socket.on("reverse_flash_prompt", (data) => {
+  const list = document.getElementById("reverse-flash-candidate-list");
+  const candidates = data.candidates || [];
+  list.innerHTML = candidates.length
+    ? candidates.map(name => `<div class="hostage-target" data-name="${name}">${name}</div>`).join("")
+    : `<div class="empty">No one is currently Targeted for Teleportation.</div>`;
+  list.querySelectorAll(".hostage-target").forEach(el => {
+    el.addEventListener("click", () => {
+      socket.emit("submit_reverse_flash_target", { reverse_flash: myName, target_name: el.dataset.name });
+      hideOverlay("reverse-flash-prompt-overlay");
+    });
+  });
+  showOverlay("reverse-flash-prompt-overlay");
+});
+
+// ---- Thunder's Stomp - pick a side ----
+socket.on("thunder_prompt", () => {
+  showOverlay("thunder-prompt-overlay");
+});
+
+function submitThunderChoice(direction) {
+  socket.emit("submit_thunder_choice", { thunder: myName, direction });
+  hideOverlay("thunder-prompt-overlay");
+}
+
 // ---- Secret Identity roster view (Plastic Man's Petty Thief, Zatanna's
 // Thgiels fo Dnah) - view-only, auto-dismisses after 10 seconds ----
 let secretRosterTimer = null;

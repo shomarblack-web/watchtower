@@ -396,6 +396,7 @@ body{
   color: var(--muted); font-size: 11px; padding: 2px 0; margin-top:2px;
 }
 .char-name input:focus{ outline:none; border-color: var(--amber); color: var(--text); }
+.spectre-transformed-name{ color: #39ff6a !important; font-weight: 700; }
 
 .health-toggle{ display:flex; gap:4px; }
 .health-btn{

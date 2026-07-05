@@ -141,6 +141,9 @@ def fresh_character_state():
             # cap above the normal MAX_HEALTH limit for one round.
             "shield_cap_override": None,
             "pep_talked_for_round": None,
+            # True only for The Spectre, once he's inherited a player
+            # via Back from Beyond - drives the bright green name display.
+            "spectre_transformed": False,
         }
     return state
 
@@ -180,6 +183,7 @@ GAME = {
     "seats": [],
     "pending_gl_reveals": [],
     "plastic_man_shielded": [],
+    "spectre_triggered": False,
     "active_good_doctor_cid": None,
     "good_doctor_requests": {},
     "active_telepathy_cid": None,
@@ -351,6 +355,14 @@ ARREST_INFO = {
         "alert": "Beast Boy turned into a T-Rex and chomped you! You lose "
                  "access to all of your abilities next round.",
         "reminder": "You're still recovering from that T-Rex chomp - no abilities this round.",
+    },
+    "thunder": {
+        "scope": "phases",
+        "phase": "Inspect",
+        "title": "Stomped!",
+        "alert": "Thunder stomped on your side of the table! You may NOT "
+                 "Discuss, Accuse, or Vote next round.",
+        "reminder": "You're still shaken from that stomp - you may NOT {phase} this round.",
     },
 }
 
@@ -1681,6 +1693,39 @@ def check_house_of_el_condition():
             log_activity(f"{display_name_for(cid)} deactivated - all of House of El has been eliminated")
 
 
+def check_spectre_transformation(eliminated_cid):
+    """The Spectre's 'Back from Beyond' passive - the first time a
+    Civilian or Bystander is Eliminated, that card deactivates and The
+    Spectre takes over with that same player, once per game."""
+    if GAME["spectre_triggered"]:
+        return
+    team = CHARACTERS_BY_ID.get(eliminated_cid, {}).get("team")
+    if team not in ("civilian", "bystander"):
+        return
+    spectre_st = GAME["characters"].get("the_spectre")
+    if not spectre_st or not spectre_st["active"] or spectre_st.get("player_name"):
+        return
+    eliminated_st = GAME["characters"][eliminated_cid]
+    player_name = eliminated_st.get("player_name")
+    if not player_name:
+        return
+    GAME["spectre_triggered"] = True
+    eliminated_st["active"] = False
+    eliminated_st["player_name"] = ""
+    eliminated_st["last_action"] = None
+    for cond in CONDITIONS.values():
+        eliminated_st[cond["flag"]] = False
+    spectre_st["active"] = True
+    spectre_st["player_name"] = player_name
+    spectre_st["spectre_transformed"] = True
+    log_activity(f"{player_name} was Eliminated as {display_name_for(eliminated_cid)}... "
+                 f"and returns from beyond as The Spectre!")
+    push_condition_alert(
+        "the_spectre", "Back from Beyond!",
+        "You have returned from beyond as The Spectre!"
+    )
+
+
 @socketio.on("character_action")
 def on_character_action(data):
     cid, action = data["id"], data["action"]
@@ -1709,6 +1754,8 @@ def on_character_action(data):
             st[cond["flag"]] = not st[cond["flag"]]
             if st[cond["flag"]]:
                 push_condition_alert(cid, cond["title"], cond["body"])
+                if action == "end":
+                    check_spectre_transformation(cid)
         if action == "end":
             check_house_of_el_condition()
     broadcast()
@@ -1781,15 +1828,24 @@ def swap_seats(name_a, name_b):
     return True
 
 
+def seats_in_direction(player_name, direction, count=2):
+    """The nearest `count` players in the given direction ('left' or
+    'right') from player_name's seat, not including themselves. Used by
+    Plastic Man's Group Hug (count=2) and Thunder's Stomp (count=5) -
+    caps naturally at however many other seats actually exist."""
+    idx = seat_index(player_name)
+    n = len(GAME["seats"])
+    if idx is None or n < 2:
+        return []
+    step = -1 if direction == "left" else 1
+    max_count = min(count, n - 1)
+    return [GAME["seats"][(idx + step * (i + 1)) % n] for i in range(max_count)]
+
+
 def two_seats_in_direction(player_name, direction):
     """The two nearest players in the given direction ('left' or
     'right') from player_name's seat - Plastic Man's Group Hug."""
-    idx = seat_index(player_name)
-    n = len(GAME["seats"])
-    if idx is None or n < 3:
-        return []
-    step = -1 if direction == "left" else 1
-    return [GAME["seats"][(idx + step) % n], GAME["seats"][(idx + 2 * step) % n]]
+    return seats_in_direction(player_name, direction, count=2)
 
 
 @socketio.on("send_plastic_man_prompt")
@@ -1826,6 +1882,55 @@ def on_submit_plastic_man_choice(data):
     GAME["plastic_man_shielded"] = targets
     log_activity(f"{pm_name} (Plastic Man) used Group Hug to the {direction} - "
                  f"{', '.join(targets) if targets else 'no one (not enough seats)'} silently shielded")
+    broadcast()
+
+
+@socketio.on("send_thunder_prompt")
+def on_send_thunder_prompt(data):
+    """Host invites Thunder to pick Left or Right for Stomp - Super
+    Ability, Round 3+, Inspect! only, matching her card."""
+    cid = data.get("id")
+    if cid != "thunder":
+        return
+    st = GAME["characters"].get(cid)
+    if not st or not st["active"] or GAME["round"] < 3 or not real_super_ability(cid):
+        return
+    current_phase = PHASES[GAME["phase_index"]] if GAME["phase_index"] is not None else None
+    if current_phase != "Inspect":
+        return
+    pname = (st.get("player_name") or "").strip()
+    sid = _sid_for_player(pname) if pname else None
+    if sid:
+        socketio.emit("thunder_prompt", {}, room=sid)
+    log_activity(f"{display_name_for(cid)} was invited to choose a Stomp direction")
+    broadcast()
+
+
+@socketio.on("submit_thunder_choice")
+def on_submit_thunder_choice(data):
+    """Thunder's player picks Left or Right. Up to 5 players on that
+    side can't Discuss, Accuse, or Vote next round - reuses the same
+    Arrested! condition and enforcement as Citizen's Arrest etc."""
+    thunder_name = (data.get("thunder") or "").strip()
+    direction = data.get("direction")
+    if not thunder_name or direction not in ("left", "right"):
+        return
+    thunder_cid = find_player_character_id(thunder_name)
+    if thunder_cid != "thunder":
+        return
+    targets = seats_in_direction(thunder_name, direction, count=5)
+    info = ARREST_INFO["thunder"]
+    for target_name in targets:
+        target_cid = find_player_character_id(target_name)
+        target_st = GAME["characters"].get(target_cid)
+        if not target_cid or not target_st or not target_st["active"]:
+            continue
+        target_st["arrested_scope"] = info["scope"]
+        target_st["arrested_by"] = thunder_cid
+        target_st["arrested_for_round"] = GAME["round"] + 1
+        push_condition_alert(target_cid, info["title"], info["alert"])
+    log_activity(f"{thunder_name} (Thunder) used Stomp to the {direction} - "
+                 f"{', '.join(targets) if targets else 'no one (not enough seats)'} affected next round")
     broadcast()
 
 
@@ -1880,12 +1985,79 @@ def on_submit_speedster_swap_target(data):
     broadcast()
 
 
+@socketio.on("send_reverse_flash_prompt")
+def on_send_reverse_flash_prompt(data):
+    """Host invites Reverse Flash to silently pick a Teleport-targeted
+    player to swap seats with - only usable during Rescue!."""
+    cid = data.get("id")
+    if cid != "reverse_flash":
+        return
+    st = GAME["characters"].get(cid)
+    if not st or not st["active"]:
+        return
+    current_phase = PHASES[GAME["phase_index"]] if GAME["phase_index"] is not None else None
+    if current_phase != "Rescue" or not _visible_phase_abilities(cid, "Rescue"):
+        return
+    pname = (st.get("player_name") or "").strip()
+    sid = _sid_for_player(pname) if pname else None
+    candidates = [
+        s["player_name"] for c, s in GAME["characters"].items()
+        if s["active"] and s.get("player_name") and s.get("targeted")
+        and s["player_name"].strip().lower() != pname.lower()
+    ]
+    if sid:
+        socketio.emit("reverse_flash_prompt", {"candidates": candidates}, room=sid)
+    log_activity(f"{display_name_for(cid)} was invited to swap seats with a Teleport-targeted player")
+    broadcast()
+
+
+@socketio.on("submit_reverse_flash_target")
+def on_submit_reverse_flash_target(data):
+    """Reverse Flash's player privately submits who to swap seats with -
+    must be someone currently Targeted for Teleportation. The swap is
+    announced publicly like Flash's, and Reverse Flash himself escapes
+    to Watchtower (Rescued) instead of whatever the target was facing."""
+    rf_name = (data.get("reverse_flash") or "").strip()
+    target_name = (data.get("target_name") or "").strip()
+    if not rf_name or not target_name:
+        return
+    rf_cid = find_player_character_id(rf_name)
+    if rf_cid != "reverse_flash":
+        return
+    target_cid = find_player_character_id(target_name)
+    target_st = GAME["characters"].get(target_cid)
+    if not target_cid or not target_st or not target_st["active"] or not target_st.get("targeted"):
+        return
+    if not swap_seats(rf_name, target_name):
+        return
+    rf_st = GAME["characters"][rf_cid]
+    rf_st["rescued"] = True
+    rf_st["last_action"] = "watchtower"
+    if rf_cid not in GAME["round_events"]["rescued"]:
+        GAME["round_events"]["rescued"].append(rf_cid)
+    log_activity(f"{rf_name} swapped seats with {target_name} and teleported to Watchtower! (Not So Fast)")
+    socketio.emit("seat_swap_announcement", {
+        "player_a": rf_name, "player_b": target_name,
+    }, room="players")
+    socketio.emit("seat_swap_announcement", {
+        "player_a": rf_name, "player_b": target_name,
+    }, room="hosts")
+    push_condition_alert(rf_cid, "Rescued!", "You swapped seats and teleported straight to Watchtower!")
+    broadcast()
+    check_win_condition()
+
+
 def _do_shuffle(exclude_char_ids=None):
     """Randomly reassign active characters to players, excluding any
     character ids in exclude_char_ids from both the pool being reassigned
     and the shuffle (their current player keeps their existing character).
     Returns an error message string on failure, or None on success."""
-    exclude_char_ids = exclude_char_ids or set()
+    exclude_char_ids = set(exclude_char_ids or set())
+    spectre_st = GAME["characters"].get("the_spectre")
+    if spectre_st and spectre_st["active"] and not spectre_st.get("spectre_transformed"):
+        # Dormant Spectre never gets a player via shuffle and doesn't
+        # count toward the active total - he's waiting for Back from Beyond.
+        exclude_char_ids.add("the_spectre")
     fixed_names = {
         GAME["characters"][cid]["player_name"].strip().lower()
         for cid in exclude_char_ids
@@ -2804,6 +2976,7 @@ def on_new_game():
     GAME["liar_decoys"] = {}
     GAME["pending_gl_reveals"] = []
     GAME["plastic_man_shielded"] = []
+    GAME["spectre_triggered"] = False
     # Player roster is left exactly as the host set it up via the New Game
     # dialog (remove/add/remove-all) - no automatic repopulation here.
     log_activity("New game started")

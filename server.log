@@ -11,7 +11,12 @@ WARNING: This is a development server. Do not use it in a production deployment.
  * Running on http://127.0.0.1:5000
  * Running on http://192.0.2.2:5000
 Press CTRL+C to quit
-127.0.0.1 - - [05/Jul/2026 05:21:59] "GET /socket.io/?transport=polling&EIO=4&t=1783228919.8490858 HTTP/1.1" 200 -
-127.0.0.1 - - [05/Jul/2026 05:22:01] "GET /socket.io/?transport=polling&EIO=4&t=1783228921.997818 HTTP/1.1" 200 -
-127.0.0.1 - - [05/Jul/2026 05:22:04] "GET /socket.io/?transport=websocket&EIO=4&sid=SEtWJFm9q6Vn05tSAAAA&t=1783228919.8528507 HTTP/1.1" 200 -
-127.0.0.1 - - [05/Jul/2026 05:22:04] "GET /socket.io/?transport=websocket&EIO=4&sid=IBvBIIvtktEynqRGAAAC&t=1783228922.0006952 HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 12:53:40] "GET /host HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 12:53:50] "GET /host HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 12:53:50] "GET /static/style.css HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 12:53:50] "GET /static/socket.io.min.js HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 12:53:50] "GET /static/host.js HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 12:53:50] "GET /socket.io/?EIO=4&transport=polling&t=PyoLvrJ HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 12:53:50] "POST /socket.io/?EIO=4&transport=polling&t=PyoLvsa&sid=PUdKTVFKN3cwpeuEAAAA HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 12:53:50] "GET /socket.io/?EIO=4&transport=polling&t=PyoLvsc&sid=PUdKTVFKN3cwpeuEAAAA HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 12:53:53] "GET /socket.io/?EIO=4&transport=websocket&sid=PUdKTVFKN3cwpeuEAAAA HTTP/1.1" 200 -
