@@ -629,7 +629,7 @@
     "abilities": [
       "PASSIVE ABILITY. Know You Anywhere. Player knows the identity of Superman.",
       "PASSIVE ABILITY. Powerless. If player is Eliminated!, Superman is Eliminated.",
-      "SUPER ABILITY. Pep Talk. During Discussion phase, player self-identifies. Superman may shield three additional players this round."
+      "SUPER ABILITY. Pep Talk. During Discussion phase, player self-identifies. Superman may shield three additional players this round. (Discuss!)"
     ],
     "strategy": "STRATEGY: Get into Watchtower."
   },
@@ -639,7 +639,7 @@
     "abilities": [
       "PASSIVE ABILITY. Know You Anywhere. Player knows the identity of Superman.",
       "PASSIVE ABILITY. Powerless. If player is Eliminated!, Superman is Eliminated.",
-      "SUPER ABILITY. Pep Talk. During Discussion phase, player self-identifies. Superman may shield three additional players this round."
+      "SUPER ABILITY. Pep Talk. During Discussion phase, player self-identifies. Superman may shield three additional players this round. (Discuss!)"
     ],
     "strategy": "STRATEGY: Get into Watchtower."
   },
@@ -845,10 +845,10 @@
     "role": "TYPE - Hero, Sidekick",
     "abilities": [
       "PASSIVE ABILITY. Green Skin. Player cannot be Exposed.",
-      "ACTIVE ABILITY. \u201cMosquito!\u201d Player cannot be targeted this round. (Discuss!)",
-      "ACTIVE ABILITY. \u201cRhino!\u201d Player is shielded this round. (Protect!)",
-      "ACTIVE ABILITY. \u201cGiraffe!\u201d Player looks at another player\u2019s card. (Accuse!)",
-      "ACTIVE ABILITY. \u201cT-Rex!\u201d Target a player. Target cannot use any abilities for one round. (Accuse!)"
+      "ACTIVE ABILITY. Mosquito! Player cannot be targeted this round. (Discuss!)",
+      "ACTIVE ABILITY. Rhino! Player is shielded this round. (Protect!)",
+      "ACTIVE ABILITY. Giraffe! Player looks at another player\u2019s card. (Accuse!)",
+      "ACTIVE ABILITY. T-Rex! Target a player. Target cannot use any abilities for one round. (Accuse!)"
     ],
     "strategy": "STRATEGY: Stop Villains."
   },

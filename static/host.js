@@ -8,6 +8,19 @@ function hideOverlay(id) {
   document.getElementById(id).classList.remove("overlay-open");
 }
 
+// ---- Type: X tags render as a small stylized letter badge instead of
+// the plain word, matching the team badge colors used elsewhere ----
+const TYPE_BADGE = {
+  civilian: '<span class="type-tag type-tag-civilian">C</span>',
+  hero: '<span class="type-tag type-tag-hero">H</span>',
+  villain: '<span class="type-tag type-tag-villain">V</span>',
+};
+function styleTypeTags(text) {
+  return text.replace(/type:?\s*(civilian|hero|villain)(\s+only)?/gi, (m, cls, only) => {
+    return "Type: " + TYPE_BADGE[cls.toLowerCase()] + (only ? " only" : "");
+  });
+}
+
 // ---- ability text parser (KIND ABILITY[.:] Title[.!?…] Description) ----
 // Title-ending punctuation is "." (stripped - just a neutral sentence
 // end) or "!"/"?"/an ellipsis (kept - usually part of the title's own
@@ -17,7 +30,7 @@ function parseAbilityText(a) {
   if (!m) return null;
   const [, kind, titleBase, term, rawDesc] = m;
   const keepTerm = term === "." ? "" : (term === "..." || term === "\u2026" ? "\u2026" : term);
-  const desc = rawDesc.replace(/^[.\s]+/, "");
+  const desc = styleTypeTags(rawDesc.replace(/^[.\s]+/, ""));
   return { kind, title: titleBase + keepTerm, desc };
 }
 
@@ -326,7 +339,7 @@ function buildCharRow(c) {
 
   if (c.is_switchable) {
     const revealBtn = document.createElement("button");
-    revealBtn.className = "action-btn reveal-btn";
+    revealBtn.className = "action-btn reveal-btn true-reveal-btn";
     revealBtn.title = `Reveal as ${c.reveal_name}`;
     revealBtn.textContent = "Reveal";
     revealBtn.onclick = () => socket.emit("reveal_character", { id: c.id });
@@ -364,10 +377,10 @@ function buildCharRow(c) {
     controls.appendChild(absorbBtn);
   }
 
-  if (["james_gordon", "maggie_sawyer", "robin", "batgirl", "zatanna"].includes(c.id)) {
+  if (["james_gordon", "maggie_sawyer", "robin", "batgirl", "zatanna", "beast_boy"].includes(c.id)) {
     const arrestBtn = document.createElement("button");
     arrestBtn.className = "action-btn reveal-btn";
-    arrestBtn.title = "Send a list of active players to arrest (Inspect! phase only)";
+    arrestBtn.title = "Send a list of active players to arrest (during that ability's own phase)";
     arrestBtn.textContent = "Send Arrest Prompt";
     arrestBtn.onclick = () => socket.emit("send_arrest_prompt", { id: c.id });
     controls.appendChild(arrestBtn);
@@ -389,6 +402,24 @@ function buildCharRow(c) {
     rosterBtn.textContent = "Show Secret Roster (10s)";
     rosterBtn.onclick = () => socket.emit("send_secret_roster", { id: c.id });
     controls.appendChild(rosterBtn);
+  }
+
+  if (c.id === "beast_boy") {
+    const giraffeBtn = document.createElement("button");
+    giraffeBtn.className = "action-btn reveal-btn";
+    giraffeBtn.title = "Send a list of active players for Beast Boy to peek at (Accuse! phase only)";
+    giraffeBtn.textContent = "Send Giraffe Prompt";
+    giraffeBtn.onclick = () => socket.emit("send_giraffe_prompt", { id: c.id });
+    controls.appendChild(giraffeBtn);
+  }
+
+  if (["martha_kent", "jonathan_kent"].includes(c.id)) {
+    const pepTalkBtn = document.createElement("button");
+    pepTalkBtn.className = "action-btn reveal-btn";
+    pepTalkBtn.title = "Boost Superman's shield to 6 for this round (Discuss! phase, Round 3+)";
+    pepTalkBtn.textContent = "Give Pep Talk";
+    pepTalkBtn.onclick = () => socket.emit("activate_pep_talk", { id: c.id });
+    controls.appendChild(pepTalkBtn);
   }
 
   if (c.id === "dr_alchemy") {
@@ -523,7 +554,7 @@ socket.on("state", (state) => {
       superBadge.remove();
     }
 
-    const revealBtn = row.querySelector(".reveal-btn");
+    const revealBtn = row.querySelector(".true-reveal-btn");
     if (revealBtn) {
       revealBtn.classList.toggle("sel", !!st.revealed);
       revealBtn.textContent = st.revealed ? "Revealed" : "Reveal";
@@ -616,6 +647,7 @@ socket.on("state", (state) => {
       } else {
         shieldVal.textContent = `${st.shield}🛡`;
         shieldVal.classList.toggle("zero", st.shield === 0);
+        shieldVal.classList.toggle("power-surge", st.shield >= 4);
         if (shieldStepper) shieldStepper.classList.remove("shield-locked");
       }
     }
@@ -985,7 +1017,7 @@ function renderHostageBanner(state) {
   }
   const hostageName = (state.characters[event.hostage_id] || {}).display_name || event.hostage_id;
   document.getElementById("hostage-banner-text").innerHTML =
-    `<b>${event.counterpart_label}</b> has 10 seconds to reveal, or <b>${hostageName}</b> loses 1 HP.`;
+    `<b>${event.counterpart_label}</b> (or a Sidekick bluffing as them) has 10 seconds to reveal, or <b>${hostageName}</b> loses 1 HP.`;
   banner.style.display = "flex";
 }
 

@@ -11,16 +11,14 @@ WARNING: This is a development server. Do not use it in a production deployment.
  * Running on http://127.0.0.1:5000
  * Running on http://192.0.2.2:5000
 Press CTRL+C to quit
-127.0.0.1 - - [05/Jul/2026 00:31:48] "GET /play HTTP/1.1" 200 -
-127.0.0.1 - - [05/Jul/2026 00:31:58] "GET /socket.io/?transport=polling&EIO=4&t=1783211518.1292837 HTTP/1.1" 200 -
-127.0.0.1 - - [05/Jul/2026 00:31:59] "GET /socket.io/?transport=websocket&EIO=4&sid=eG99JOiZOYxX2BEYAAAA&t=1783211518.133087 HTTP/1.1" 200 -
-127.0.0.1 - - [05/Jul/2026 00:32:00] "GET /play HTTP/1.1" 200 -
-127.0.0.1 - - [05/Jul/2026 00:32:00] "GET /static/player.js HTTP/1.1" 200 -
-127.0.0.1 - - [05/Jul/2026 00:32:00] "GET /static/socket.io.min.js HTTP/1.1" 200 -
-127.0.0.1 - - [05/Jul/2026 00:32:00] "GET /static/style.css HTTP/1.1" 200 -
-127.0.0.1 - - [05/Jul/2026 00:32:00] "GET /socket.io/?EIO=4&transport=polling&t=Pyli74x HTTP/1.1" 200 -
-127.0.0.1 - - [05/Jul/2026 00:32:00] "POST /socket.io/?EIO=4&transport=polling&t=Pyli75C&sid=156_a1rTxO71V3fjAAAC HTTP/1.1" 200 -
-127.0.0.1 - - [05/Jul/2026 00:32:00] "GET /socket.io/?EIO=4&transport=polling&t=Pyli75E&sid=156_a1rTxO71V3fjAAAC HTTP/1.1" 200 -
-127.0.0.1 - - [05/Jul/2026 00:32:01] "GET /socket.io/?transport=polling&EIO=4&t=1783211521.4235988 HTTP/1.1" 200 -
-127.0.0.1 - - [05/Jul/2026 00:32:13] "GET /socket.io/?transport=websocket&EIO=4&sid=T1EDMddldH1-A9tmAAAE&t=1783211521.4273508 HTTP/1.1" 200 -
-127.0.0.1 - - [05/Jul/2026 00:32:13] "GET /socket.io/?EIO=4&transport=websocket&sid=156_a1rTxO71V3fjAAAC HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 00:52:36] "GET /play HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 00:52:43] "GET /socket.io/?transport=polling&EIO=4&t=1783212763.6736667 HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 00:52:44] "GET /socket.io/?transport=websocket&EIO=4&sid=5DQ9pN9TWtOEgKtTAAAA&t=1783212763.677863 HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 00:52:45] "GET /play HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 00:52:45] "GET /static/style.css HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 00:52:45] "GET /static/socket.io.min.js HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 00:52:45] "GET /static/player.js HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 00:52:45] "GET /socket.io/?EIO=4&transport=polling&t=Pylmt5Q HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 00:52:45] "POST /socket.io/?EIO=4&transport=polling&t=Pylmt5j&sid=eZIvmbzIEbiMTr91AAAC HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 00:52:45] "GET /socket.io/?EIO=4&transport=polling&t=Pylmt5p&sid=eZIvmbzIEbiMTr91AAAC HTTP/1.1" 200 -
+127.0.0.1 - - [05/Jul/2026 00:52:47] "GET /socket.io/?EIO=4&transport=websocket&sid=eZIvmbzIEbiMTr91AAAC HTTP/1.1" 200 -

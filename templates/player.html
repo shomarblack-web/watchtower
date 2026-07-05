@@ -258,6 +258,28 @@
   </div>
 </div>
 
+<div id="giraffe-prompt-overlay" class="map-overlay">
+  <div class="card-modal kirby-frame">
+    <div class="kirby-inner">
+      <div class="reveal-label">Giraffe!</div>
+      <p style="color:var(--muted); font-size:13px">Pick a player to peek at their card.</p>
+      <div id="giraffe-candidate-list" class="hostage-target-list"></div>
+    </div>
+  </div>
+</div>
+
+<div id="giraffe-reveal-overlay" class="map-overlay">
+  <div class="reveal-modal kirby-frame">
+    <div class="kirby-inner">
+      <div class="reveal-label">Giraffe! Reveals</div>
+      <div class="reveal-name" id="giraffe-reveal-text" style="font-size:22px">—</div>
+      <div class="reveal-buttons">
+        <button class="btn-ghost" onclick="closeGiraffeReveal()">Got it</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="secret-roster-overlay" class="map-overlay">
   <div class="card-modal kirby-frame">
     <div class="kirby-inner">

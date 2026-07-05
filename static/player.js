@@ -8,6 +8,19 @@ function hideOverlay(id) {
   document.getElementById(id).classList.remove("overlay-open");
 }
 
+// ---- Type: X tags render as a small stylized letter badge instead of
+// the plain word, matching the team badge colors used elsewhere ----
+const TYPE_BADGE = {
+  civilian: '<span class="type-tag type-tag-civilian">C</span>',
+  hero: '<span class="type-tag type-tag-hero">H</span>',
+  villain: '<span class="type-tag type-tag-villain">V</span>',
+};
+function styleTypeTags(text) {
+  return text.replace(/type:?\s*(civilian|hero|villain)(\s+only)?/gi, (m, cls, only) => {
+    return "Type: " + TYPE_BADGE[cls.toLowerCase()] + (only ? " only" : "");
+  });
+}
+
 // ---- ability text parser (KIND ABILITY[.:] Title[.!?…] Description) ----
 // Title-ending punctuation is "." (stripped - just a neutral sentence
 // end) or "!"/"?"/an ellipsis (kept - usually part of the title's own
@@ -17,7 +30,7 @@ function parseAbilityText(a) {
   if (!m) return null;
   const [, kind, titleBase, term, rawDesc] = m;
   const keepTerm = term === "." ? "" : (term === "..." || term === "\u2026" ? "\u2026" : term);
-  const desc = rawDesc.replace(/^[.\s]+/, "");
+  const desc = styleTypeTags(rawDesc.replace(/^[.\s]+/, ""));
   return { kind, title: titleBase + keepTerm, desc };
 }
 
@@ -285,6 +298,31 @@ socket.on("good_doctor_prompt", (data) => {
 
 function closeGoodDoctorConfirm() {
   hideOverlay("good-doctor-confirm-overlay");
+}
+
+// ---- Beast Boy's Giraffe! - peek at one player's identity ----
+socket.on("giraffe_prompt", (data) => {
+  const list = document.getElementById("giraffe-candidate-list");
+  const candidates = data.candidates || [];
+  list.innerHTML = candidates.length
+    ? candidates.map(name => `<div class="hostage-target" data-name="${name}">${name}</div>`).join("")
+    : `<div class="empty">No one else is active right now.</div>`;
+  list.querySelectorAll(".hostage-target").forEach(el => {
+    el.addEventListener("click", () => {
+      socket.emit("submit_giraffe_target", { beast_boy: myName, target_name: el.dataset.name });
+      hideOverlay("giraffe-prompt-overlay");
+    });
+  });
+  showOverlay("giraffe-prompt-overlay");
+});
+
+socket.on("giraffe_reveal", (data) => {
+  document.getElementById("giraffe-reveal-text").textContent = `${data.player} is ${data.character}`;
+  showOverlay("giraffe-reveal-overlay");
+});
+
+function closeGiraffeReveal() {
+  hideOverlay("giraffe-reveal-overlay");
 }
 
 // ---- Secret Identity roster view (Plastic Man's Petty Thief, Zatanna's

@@ -137,6 +137,10 @@ def fresh_character_state():
             "arrested_scope": None,
             "arrested_for_round": None,
             "arrested_by": None,
+            # Ma/Pa Kent's Pep Talk: temporarily raises Superman's shield
+            # cap above the normal MAX_HEALTH limit for one round.
+            "shield_cap_override": None,
+            "pep_talked_for_round": None,
         }
     return state
 
@@ -298,6 +302,7 @@ def secret_roster_available(cid):
 ARREST_INFO = {
     "james_gordon": {
         "scope": "phases",
+        "phase": "Inspect",
         "title": "Citizen's Arrest!",
         "alert": "You've been placed under Citizen's Arrest! You may NOT "
                  "Discuss, Vote, or Accuse next round.",
@@ -305,6 +310,7 @@ ARREST_INFO = {
     },
     "maggie_sawyer": {
         "scope": "phases",
+        "phase": "Inspect",
         "title": "Citizen's Arrest!",
         "alert": "You've been placed under Citizen's Arrest! You may NOT "
                  "Discuss, Vote, or Accuse next round.",
@@ -312,22 +318,33 @@ ARREST_INFO = {
     },
     "robin": {
         "scope": "all_abilities",
+        "phase": "Inspect",
         "title": "Bat-Cuffed!",
         "alert": "You've been bat-cuffed! You lose access to all your abilities next round!",
         "reminder": "You're still bat-cuffed - no abilities this round.",
     },
     "batgirl": {
         "scope": "all_abilities",
+        "phase": "Inspect",
         "title": "Bat-Cuffed!",
         "alert": "You've been bat-cuffed! You lose access to all your abilities next round!",
         "reminder": "You're still bat-cuffed - no abilities this round.",
     },
     "zatanna": {
         "scope": "all_abilities",
+        "phase": "Inspect",
         "title": "You are a rabbit!",
         "alert": "Zatanna's spell has turned you into a rabbit! You cannot "
                  "use any of your abilities next round.",
         "reminder": "You're still a rabbit - no abilities this round.",
+    },
+    "beast_boy": {
+        "scope": "all_abilities",
+        "phase": "Accuse",
+        "title": "T-Rex Chomp!",
+        "alert": "Beast Boy turned into a T-Rex and chomped you! You lose "
+                 "access to all of your abilities next round.",
+        "reminder": "You're still recovering from that T-Rex chomp - no abilities this round.",
     },
 }
 
@@ -1180,6 +1197,13 @@ def on_set_round(data):
                 st["arrested_scope"] = None
                 st["arrested_for_round"] = None
                 st["arrested_by"] = None
+        superman_st = GAME["characters"].get("superman")
+        if (superman_st and superman_st.get("pep_talked_for_round") is not None
+                and new_round > superman_st["pep_talked_for_round"]):
+            superman_st["shield_cap_override"] = None
+            superman_st["pep_talked_for_round"] = None
+            if superman_st.get("shield") is not None:
+                superman_st["shield"] = min(MAX_HEALTH, superman_st["shield"])
 
     if new_round >= 3 and not GAME["super_abilities_announced"]:
         GAME["super_abilities_announced"] = True
@@ -1222,11 +1246,14 @@ def _set_phase_by_index(idx, error_sid=None):
         GAME["active_inspector_cid"] = None
         GAME["active_alchemist_cid"] = None
         GAME["pending_alchemy"] = None
-        GAME["active_arrester_cid"] = None
+        if GAME["active_arrester_cid"] and ARREST_INFO.get(GAME["active_arrester_cid"], {}).get("phase") == "Inspect":
+            GAME["active_arrester_cid"] = None
     if old_phase == "Protect" and (idx is None or PHASES[idx] != "Protect"):
         GAME["active_protector_cid"] = None
     if old_phase == "Accuse" and (idx is None or PHASES[idx] != "Accuse"):
         GAME["active_absorber_cid"] = None
+        if GAME["active_arrester_cid"] and ARREST_INFO.get(GAME["active_arrester_cid"], {}).get("phase") == "Accuse":
+            GAME["active_arrester_cid"] = None
     GAME["phase_index"] = idx
     if idx is not None:
         log_activity(f"Phase: {PHASES[idx]}!")
@@ -1392,7 +1419,8 @@ def on_adjust_shield(data):
     st = GAME["characters"].get(cid)
     if not st or st["shield"] is None:
         return
-    st["shield"] = max(0, min(MAX_HEALTH, st["shield"] + delta))
+    cap = st.get("shield_cap_override") or MAX_HEALTH
+    st["shield"] = max(0, min(cap, st["shield"] + delta))
     log_activity(f"{CHARACTERS_BY_ID[cid]['name']} shield: {st['shield']}")
     broadcast()
 
@@ -1517,7 +1545,7 @@ def on_take_hostage(data):
     }
     log_activity(
         f"{display_name_for(holder_id)} takes {display_name_for(hostage_id)} hostage! "
-        f"{counterpart_label} has 10 seconds to reveal."
+        f"{counterpart_label} (or a bluffing Sidekick) has 10 seconds to reveal."
     )
     broadcast()
 
@@ -1891,6 +1919,87 @@ def on_send_secret_roster(data):
     broadcast()
 
 
+@socketio.on("send_giraffe_prompt")
+def on_send_giraffe_prompt(data):
+    """Beast Boy's Giraffe! - host invites him to silently pick one
+    active player to peek at (Accuse! phase only)."""
+    cid = data.get("id")
+    if cid != "beast_boy":
+        return
+    st = GAME["characters"].get(cid)
+    if not st or not st["active"]:
+        return
+    current_phase = PHASES[GAME["phase_index"]] if GAME["phase_index"] is not None else None
+    if current_phase != "Accuse" or not _visible_phase_abilities(cid, "Accuse"):
+        return
+    pname = (st.get("player_name") or "").strip()
+    sid = _sid_for_player(pname) if pname else None
+    if sid:
+        socketio.emit("giraffe_prompt", {
+            "candidates": active_player_names(exclude_name=pname)
+        }, room=sid)
+    log_activity(f"{display_name_for(cid)} was invited to peek at a player's card (Giraffe!)")
+    broadcast()
+
+
+@socketio.on("submit_giraffe_target")
+def on_submit_giraffe_target(data):
+    """Beast Boy's player privately submits who to peek at - sees the
+    single reveal immediately, no host approval needed."""
+    beast_boy_name = (data.get("beast_boy") or "").strip()
+    target_name = (data.get("target_name") or "").strip()
+    if not beast_boy_name or not target_name:
+        return
+    beast_boy_cid = find_player_character_id(beast_boy_name)
+    if beast_boy_cid != "beast_boy":
+        return
+    target_cid = find_player_character_id(target_name)
+    if not target_cid or not GAME["characters"][target_cid]["active"]:
+        return
+    sid = _sid_for_player(beast_boy_name)
+    if sid:
+        socketio.emit("giraffe_reveal", {
+            "player": target_name, "character": display_name_for(target_cid),
+        }, room=sid)
+    log_activity(f"Beast Boy peeked at {display_name_for(target_cid)}'s card (Giraffe!)")
+    broadcast()
+
+
+PEP_TALK_GIVERS = {"martha_kent": "Ma Kent", "jonathan_kent": "Pa Kent"}
+PEP_TALK_SHIELD_VALUE = 6
+
+
+@socketio.on("activate_pep_talk")
+def on_activate_pep_talk(data):
+    """Ma/Pa Kent's Pep Talk - during Discuss!, raises Superman's shield
+    to 6 for the round, temporarily lifting his normal cap."""
+    cid = data.get("id")
+    if cid not in PEP_TALK_GIVERS:
+        return
+    st = GAME["characters"].get(cid)
+    if not st or not st["active"] or GAME["round"] < 3 or not real_super_ability(cid):
+        return
+    current_phase = PHASES[GAME["phase_index"]] if GAME["phase_index"] is not None else None
+    if current_phase != "Discuss":
+        return
+    superman_st = GAME["characters"].get("superman")
+    if not superman_st or not superman_st["active"] or superman_st.get("shield") is None:
+        socketio.emit("character_limit_error", {
+            "message": "Superman isn't active (or has no shield) right now - Pep Talk has nothing to boost."
+        }, room=request.sid)
+        return
+    superman_st["shield"] = PEP_TALK_SHIELD_VALUE
+    superman_st["shield_cap_override"] = PEP_TALK_SHIELD_VALUE
+    superman_st["pep_talked_for_round"] = GAME["round"]
+    giver_name = PEP_TALK_GIVERS[cid]
+    log_activity(f"{giver_name} gave Superman a Pep Talk - shield boosted to {PEP_TALK_SHIELD_VALUE}")
+    push_condition_alert(
+        "superman", "Pep Talk!",
+        f"{giver_name} gave you a Pep Talk. You can protect up to {PEP_TALK_SHIELD_VALUE} players this round."
+    )
+    broadcast()
+
+
 def eliminated_player_names():
     """Real names of every active, assigned, currently-Eliminated player -
     the pool a Good Doctor can propose restoring."""
@@ -2098,22 +2207,24 @@ def eligible_arresters():
         {"id": cid, "name": display_name_for(cid), "scope": ARREST_INFO[cid]["scope"]}
         for cid, st in GAME["characters"].items()
         if cid in ARREST_INFO and st["active"]
-        and _visible_phase_abilities(cid, "Inspect")
+        and _visible_phase_abilities(cid, ARREST_INFO[cid]["phase"])
     ]
 
 
 @socketio.on("send_arrest_prompt")
 def on_send_arrest_prompt(data):
     """Host invites James Gordon/Maggie Sawyer/Robin/Batgirl/Zatanna to
-    silently pick a player to arrest - only usable during Inspect!."""
+    silently pick a player to arrest - only usable during that ability's
+    tagged phase (varies per character - see ARREST_INFO)."""
     cid = data.get("id")
     st = GAME["characters"].get(cid)
     if not st or not st["active"] or cid not in ARREST_INFO:
         return
+    required_phase = ARREST_INFO[cid]["phase"]
     phase = PHASES[GAME["phase_index"]] if GAME["phase_index"] is not None else None
-    if phase != "Inspect":
+    if phase != required_phase:
         return
-    if not _visible_phase_abilities(cid, "Inspect"):
+    if not _visible_phase_abilities(cid, required_phase):
         return
     GAME["active_arrester_cid"] = cid
     pname = (st.get("player_name") or "").strip()

@@ -447,6 +447,7 @@ body{
 }
 .step-val.zero{ color: var(--down); }
 .step-val.max{ color: var(--amber); }
+.step-val.power-surge{ color: #2dd4ff; text-shadow: 0 0 6px rgba(45,212,255,.6); }
 
 .special-btn{ text-align:center; }
 .special-btn.sel{ background: var(--amber); color:#1a1305; border-color: var(--amber); }
@@ -517,6 +518,14 @@ body{
 }
 .ability-title{ font-weight:700; font-size:14px; margin: 1px 0 2px; }
 .ability-desc{ font-size:13px; color: var(--text); opacity:.85; line-height:1.4; }
+.type-tag{
+  display:inline-flex; align-items:center; justify-content:center;
+  width:16px; height:16px; border-radius:4px; font-size:10px; font-weight:800;
+  font-family:'Rajdhani',sans-serif; vertical-align:-2px; margin:0 1px;
+}
+.type-tag-civilian{ background:#f3aecb; color:#3a1a28; }
+.type-tag-hero{ background:#3b7fe0; color:#ffffff; }
+.type-tag-villain{ background:#2fbf6e; color:#0a2214; }
 .card-strategy{
   margin-top: 14px; padding-top: 10px; border-top: 1px dotted var(--line);
   font-size: 12px; color: var(--muted); font-style: italic;
