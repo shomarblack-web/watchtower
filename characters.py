@@ -155,6 +155,8 @@ SWITCH_CHARACTERS = {
     "dr_harleen_quinzel": "Harley Quinn",
     "dr_caitlin_snow": "Killer Frost",
     "reign": "Reign",
+    "martin_stein": "Firestorm",
+    "jefferson_jackson": "Firestorm",
 }
 for _c in CHARACTERS:
     _c["is_switchable"] = _c["id"] in SWITCH_CHARACTERS
@@ -176,9 +178,22 @@ KRYPTONIAN_IDS = {"superman", "supergirl", "superboy", "krypto"}
 # Broader than KRYPTONIAN_IDS above (which is scoped narrowly to "heroes who
 # can save a Kryptonian hostage"). This one is for the Kryptonian team icon
 # on player cards, so it includes villain-side Kryptonians too.
-KRYPTONIAN_TEAM_IDS = {"superman", "supergirl", "superboy", "krypto", "zod", "faora", "reign"}
+KRYPTONIAN_TEAM_IDS = {"superman", "supergirl", "superboy", "krypto", "zod", "faora", "reign", "doomsday"}
 for _c in CHARACTERS:
     _c["is_kryptonian"] = _c["id"] in KRYPTONIAN_TEAM_IDS
+
+# Speedster team icon - matches Zoom's "Speed Thief" card text exactly
+# (Flash, K. Flash, R. Flash, Jesse Quick), plus Zoom himself.
+SPEEDSTER_IDS = {"the_flash", "kid_flash", "jesse_quick", "reverse_flash", "zoom"}
+for _c in CHARACTERS:
+    _c["is_speedster"] = _c["id"] in SPEEDSTER_IDS
+
+# House of El - purely a mechanical tag (no card badge) for Krypto's and
+# Streaky's "Loyal Companion" passive: they're only eliminated once every
+# active House of El member has been eliminated.
+HOUSE_OF_EL_IDS = {"superman", "supergirl", "superboy"}
+for _c in CHARACTERS:
+    _c["is_house_of_el"] = _c["id"] in HOUSE_OF_EL_IDS
 
 # ------------------------------------------------------------------------
 # "Know You Anywhere" and its many variants. Each entry is a LIST of

@@ -643,6 +643,7 @@ body{
   background: var(--amber); color:#1a1305; border:none; border-radius:6px; padding:10px 14px;
   cursor:pointer; font-size:13px; width:100%;
 }
+.btn-primary:disabled, .btn-ghost:disabled{ opacity:.35; cursor:not-allowed; }
 .btn-ghost{
   font-family:'Rajdhani',sans-serif; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
   background: transparent; color:var(--muted); border:1px solid var(--line); border-radius:6px; padding:10px 14px;

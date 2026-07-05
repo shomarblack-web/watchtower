@@ -264,6 +264,26 @@ function closeArrestConfirm() {
   hideOverlay("arrest-confirm-overlay");
 }
 
+// ---- Round-change requests (Mind Merge, Blackout, Altering the
+// Timeline, Loyal Assistant, Construct, Turn the Earth) ----
+function renderRoundChangeButton(rc) {
+  if (rc.pending) {
+    return `<button class="btn-ghost round-change-btn" disabled style="margin-top:8px;width:auto">Waiting for Watchtower&hellip;</button>`;
+  }
+  const disabledAttr = rc.enabled ? "" : "disabled";
+  return `<button class="btn-primary round-change-btn" style="margin-top:8px;width:auto" ${disabledAttr}
+            onclick="requestRoundChange('${rc.label}')">
+            Request: ${rc.target_phase}!
+          </button>`;
+}
+
+function requestRoundChange(label) {
+  if (!currentCardId) return;
+  socket.emit("request_round_change", { id: currentCardId, player: myName });
+  // Refresh the card shortly after so the button flips to "Waiting..."
+  setTimeout(() => socket.emit("get_my_card", { name: myName }), 200);
+}
+
 // ---- secret identity reveal (Know You Anywhere) ----
 socket.on("secret_identity_reveal", (data) => {
   const reveals = data.reveals || [];
@@ -325,6 +345,13 @@ function starroBadgeSvg() {
   </svg>`;
 }
 
+function speedsterBadgeSvg() {
+  return `<svg viewBox="0 0 44 44" class="team-badge" title="Speedster">
+    <circle cx="22" cy="22" r="21" fill="#f5d76e" stroke="#05070a" stroke-width="2"/>
+    <polygon points="24,8 12,25 20,25 18,36 32,18 23,18" fill="#3a2f05" stroke="#3a2f05" stroke-width="1" stroke-linejoin="round"/>
+  </svg>`;
+}
+
 function renderCardBadges(data) {
   const el = document.getElementById("mycard-badges");
   const badges = [];
@@ -333,27 +360,35 @@ function renderCardBadges(data) {
     badges.push(letterBadgeSvg(teamIcon.letter, teamIcon.bg, teamIcon.fg, data.team));
   }
   if (data.is_kryptonian) badges.push(kryptonianBadgeSvg());
+  if (data.is_speedster) badges.push(speedsterBadgeSvg());
   if (data.fury) badges.push(furyBadgeSvg());
   if (data.starro) badges.push(starroBadgeSvg());
   el.innerHTML = badges.join("");
 }
 
+let currentCardId = null;
+
 socket.on("my_card_result", (data) => {
   const body = document.getElementById("mycard-body");
   document.getElementById("mycard-name").textContent = data.assigned ? data.character : "No character yet";
   renderCardBadges(data.assigned ? data : {});
+  currentCardId = data.assigned ? data.id : null;
   if (!data.assigned) {
     body.innerHTML = `<div class="empty">You haven't been assigned a character yet — ask your host to shuffle.</div>`;
     return;
   }
   const card = data.card || {};
+  const rc = data.round_change;
   const abilityRows = (card.abilities || []).map(a => {
     const parsed = parseAbilityText(a);
     if (parsed) {
+      const isRoundChangeAbility = rc && parsed.title === rc.label;
+      const buttonHtml = isRoundChangeAbility ? renderRoundChangeButton(rc) : "";
       return `<div class="ability-row">
                 <div class="ability-kind">${parsed.kind}</div>
                 <div class="ability-title">${parsed.title}</div>
                 <div class="ability-desc">${parsed.desc}</div>
+                ${buttonHtml}
               </div>`;
     }
     return `<div class="ability-row"><div class="ability-desc">${a}</div></div>`;
@@ -364,12 +399,22 @@ socket.on("my_card_result", (data) => {
     <div class="lobo-tracker-row"><span class="lobo-tracker-label">Heroes</span><span class="lobo-tracker-count">${data.lobo_tracker.hero}</span></div>
     <div class="lobo-tracker-row"><span class="lobo-tracker-label">Martians</span><span class="lobo-tracker-count">${data.lobo_tracker.martian}</span></div>
   ` : "";
+  const speedsterHtml = data.speedster_count !== null && data.speedster_count !== undefined ? `
+    <div class="card-meta" style="margin-top:14px">Speed Thief — Active Speedsters in Play</div>
+    <div class="lobo-tracker-row"><span class="lobo-tracker-label">Speedsters (not counting you)</span><span class="lobo-tracker-count">${data.speedster_count}</span></div>
+  ` : "";
+  const kryptonianHtml = data.kryptonian_count !== null && data.kryptonian_count !== undefined ? `
+    <div class="card-meta" style="margin-top:14px">For Krypton — Active Kryptonians in Play</div>
+    <div class="lobo-tracker-row"><span class="lobo-tracker-label">Kryptonians (not counting you)</span><span class="lobo-tracker-count">${data.kryptonian_count}</span></div>
+  ` : "";
   body.innerHTML = `
     ${card.role ? `<div class="card-meta">${card.role}</div>` : ""}
     ${card.signal ? `<div class="card-meta">${card.signal}</div>` : ""}
     <div class="ability-list">${abilityRows || '<div class="empty">No abilities on file.</div>'}</div>
     ${card.strategy ? `<div class="card-strategy">${card.strategy}</div>` : ""}
     ${trackerHtml}
+    ${speedsterHtml}
+    ${kryptonianHtml}
   `;
 });
 

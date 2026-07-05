@@ -602,11 +602,11 @@
     "role": "TYPE - Civilian",
     "abilities": [
       "PASSIVE ABILITY. Jefferson? Player knows the identity of Jax.",
-      "PASSIVE ABILITY. Shared Pain. Player must be targeted twice for elimination.",
-      "ACTIVE ABILITY. \u201cFirestorm!\u201d  High-five Jax. (Discuss!) *Professor Martin Stein is now Rescued. **Player is now Type: Hero. ***Player must act in-unison.",
-      "SUPER ABILITY. Transmutation (I). Firestorm may change any rule in the game. All players must follow new rule until end of game. (Discuss!) **This ability only works in-unison.",
-      "SUPER ABILITY. The Heat is On (II). The three players to your right must self-identify. (Accuse!) **This ability only works in-unison.",
-      "SUPER ABILITY. Blast Off (III). Target one player. Firestorm and target may move to any zone. (Rescue!) **This ability only works in-unison."
+      "PASSIVE ABILITY. Shared Pain. Player must be targeted twice for elimination. **Type: Hero only",
+      "ACTIVE ABILITY. \u201cFirestorm!\u201d  High-five Jax. (Discuss!) *Professor Martin Stein is now Rescued. **Player is now Type: Hero. ***Player must act in-unison. **Type: Hero only",
+      "SUPER ABILITY. Transmutation (I). Firestorm may change any rule in the game. All players must follow new rule until end of game. (Discuss!) **This ability only works in-unison. **Type: Hero only",
+      "SUPER ABILITY. The Heat is On (II). The three players to your right must self-identify. (Accuse!) **This ability only works in-unison. **Type: Hero only",
+      "SUPER ABILITY. Blast Off (III). Target one player. Firestorm and target may move to any zone. (Rescue!) **This ability only works in-unison. **Type: Hero only"
     ],
     "strategy": "STRATEGY: Get into Watchtower/Get Civilians to Watchtower."
   },
@@ -615,11 +615,11 @@
     "role": "TYPE - Civilian",
     "abilities": [
       "PASSIVE ABILITY. Jefferson? Player knows the identity of Jax.",
-      "PASSIVE ABILITY. Shared Pain. Player must be targeted twice for elimination.",
-      "ACTIVE ABILITY. \u201cFirestorm!\u201d  High-five Jax. (Discuss!) *Professor Martin Stein is now Rescued. **Player is now Type: Hero. ***Player must act in-unison.",
-      "SUPER ABILITY. Transmutation (I). Firestorm may change any rule in the game. All players must follow new rule until end of game. (Discuss!) **This ability only works in-unison.",
-      "SUPER ABILITY. The Heat is On (II). The three players to your right must self-identify. (Accuse!) **This ability only works in-unison.",
-      "SUPER ABILITY. Blast Off (III). Target one player. Firestorm and target may move to any zone. (Rescue!) **This ability only works in-unison."
+      "PASSIVE ABILITY. Shared Pain. Player must be targeted twice for elimination. **Type: Hero only",
+      "ACTIVE ABILITY. \u201cFirestorm!\u201d  High-five Jax. (Discuss!) *Professor Martin Stein is now Rescued. **Player is now Type: Hero. ***Player must act in-unison. **Type: Hero only",
+      "SUPER ABILITY. Transmutation (I). Firestorm may change any rule in the game. All players must follow new rule until end of game. (Discuss!) **This ability only works in-unison. **Type: Hero only",
+      "SUPER ABILITY. The Heat is On (II). The three players to your right must self-identify. (Accuse!) **This ability only works in-unison. **Type: Hero only",
+      "SUPER ABILITY. Blast Off (III). Target one player. Firestorm and target may move to any zone. (Rescue!) **This ability only works in-unison. **Type: Hero only"
     ],
     "strategy": ""
   },
@@ -768,7 +768,7 @@
     "signal": "SIGNAL - Z or zig-zag",
     "role": "TYPE - Hero, Sidekick",
     "abilities": [
-      "wrap = 500, IVE ABILITY. Tied to the Speed Force. Player knows the identity of The Flash.",
+      "PASSIVE ABILITY. Tied to the Speed Force. Player knows the identity of The Flash.",
       "PASSIVE ABILITY. Team Flash. Player may lie for The Flash. (Accuse!).",
       "SUPER ABILITY. Speedy Escape. Target one player. Player and target are now Rescued! (Speed Force). (Rescue!)"
     ],

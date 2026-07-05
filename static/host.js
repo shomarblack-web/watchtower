@@ -452,6 +452,7 @@ socket.on("state", (state) => {
 
   renderPlayersPanel(state);
   renderHostageBanner(state);
+  renderRoundChangeBanners(state);
   if (state.game_over) {
     document.getElementById("gameover-banner-title").textContent = state.game_over.title;
     document.getElementById("gameover-banner-message").textContent = state.game_over.message;
@@ -751,12 +752,20 @@ function starroBadgeSvg() {
   </svg>`;
 }
 
+function speedsterBadgeSvg() {
+  return `<svg viewBox="0 0 44 44" class="team-badge" title="Speedster">
+    <circle cx="22" cy="22" r="21" fill="#f5d76e" stroke="#05070a" stroke-width="2"/>
+    <polygon points="24,8 12,25 20,25 18,36 32,18 23,18" fill="#3a2f05" stroke="#3a2f05" stroke-width="1" stroke-linejoin="round"/>
+  </svg>`;
+}
+
 function renderHostCardBadges(c, st) {
   const el = document.getElementById("card-badges");
   const badges = [];
   const teamIcon = TEAM_ICONS[c ? c.team : null];
   if (teamIcon) badges.push(letterBadgeSvg(teamIcon.letter, teamIcon.bg, teamIcon.fg, c.team));
   if (c && c.is_kryptonian) badges.push(kryptonianBadgeSvg());
+  if (c && c.is_speedster) badges.push(speedsterBadgeSvg());
   if (st && st.fury) badges.push(furyBadgeSvg());
   if (st && st.starro) badges.push(starroBadgeSvg());
   el.innerHTML = badges.join("");
@@ -803,10 +812,29 @@ function openCard(id) {
       <div class="ability-list">${abilityRows || '<div class="empty">No abilities on file.</div>'}</div>
       ${card.strategy ? `<div class="card-strategy">${card.strategy}</div>` : ""}
       ${id === "lobo" ? renderLoboTrackerHtml() : ""}
+      ${id === "zoom" ? renderZoomSpeedsterHtml() : ""}
+      ${["zod", "faora", "reign"].includes(id) ? renderKryptonianCountHtml(id) : ""}
     `;
   }
 
   showOverlay("card-overlay");
+}
+
+function renderZoomSpeedsterHtml() {
+  const count = (latestState && latestState.active_speedster_count) || 0;
+  return `
+    <div class="card-meta" style="margin-top:14px">Speed Thief — Active Speedsters in Play</div>
+    <div class="lobo-tracker-row"><span class="lobo-tracker-label">Speedsters (not counting Zoom)</span><span class="lobo-tracker-count">${count}</span></div>
+  `;
+}
+
+function renderKryptonianCountHtml(id) {
+  const count = (latestState && latestState.kryptonian_counts && latestState.kryptonian_counts[id]) || 0;
+  const name = (CHARACTERS.find(x => x.id === id) || {}).name || id;
+  return `
+    <div class="card-meta" style="margin-top:14px">For Krypton — Active Kryptonians in Play</div>
+    <div class="lobo-tracker-row"><span class="lobo-tracker-label">Kryptonians (not counting ${name})</span><span class="lobo-tracker-count">${count}</span></div>
+  `;
 }
 
 function renderLoboTrackerHtml() {
@@ -940,6 +968,29 @@ function renderHostageBanner(state) {
   document.getElementById("hostage-banner-text").innerHTML =
     `<b>${event.counterpart_label}</b> has 10 seconds to reveal, or <b>${hostageName}</b> loses 1 HP.`;
   banner.style.display = "flex";
+}
+
+function renderRoundChangeBanners(state) {
+  const container = document.getElementById("round-change-banners");
+  const requests = state.round_change_requests || {};
+  const ids = Object.keys(requests);
+  if (!ids.length) {
+    container.innerHTML = "";
+    return;
+  }
+  container.innerHTML = ids.map(cid => {
+    const req = requests[cid];
+    const charName = (state.characters[cid] || {}).display_name
+      || (CHARACTERS.find(x => x.id === cid) || {}).name || cid;
+    return `
+      <div class="hostage-banner" style="display:flex">
+        <div><b>${charName}</b> (${req.player_name}) requests <b>${req.label}</b> \u2192 start ${req.target_phase}!</div>
+        <div class="hostage-banner-buttons">
+          <button class="btn-primary" style="margin:0" onclick="socket.emit('resolve_round_change', {id: '${cid}', approve: true})">Approve</button>
+          <button class="btn-ghost" style="margin:0" onclick="socket.emit('resolve_round_change', {id: '${cid}', approve: false})">Deny</button>
+        </div>
+      </div>`;
+  }).join("");
 }
 
 function resolveHostageRelease() {

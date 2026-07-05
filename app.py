@@ -172,6 +172,7 @@ GAME = {
     "active_alchemist_cid": None,
     "pending_alchemy": None,
     "active_arrester_cid": None,
+    "round_change_requests": {},
 }
 
 
@@ -196,6 +197,47 @@ def display_name_for(cid):
 
 
 _ABILITY_TYPE_RE = re.compile(r"type:?\s*(civilian|hero|villain)", re.IGNORECASE)
+
+# Abilities that let a player request Watchtower change/redo the current
+# round's phase. Each is only clickable during its listed phase (None =
+# no phase restriction) or, for "eliminated"-triggered ones, once that
+# player's own character has the Eliminated condition. The host must
+# approve every request before anything actually happens - clicking
+# never changes the phase directly.
+ROUND_CHANGE_ABILITIES = {
+    "white_martian_i": {"label": "Mind Merge", "trigger": "phase", "phase": "Discuss", "target_phase": "Eliminate"},
+    "white_martian_ii": {"label": "Mind Merge", "trigger": "phase", "phase": "Discuss", "target_phase": "Eliminate"},
+    "the_flash": {"label": "Altering the Timeline", "trigger": "phase", "phase": "Rescue", "target_phase": "Vote"},
+    "miss_tessmacher": {"label": "Loyal Assistant", "trigger": "phase", "phase": "Discuss", "target_phase": "Accuse"},
+    "otis": {"label": "Loyal Assistant", "trigger": "phase", "phase": "Discuss", "target_phase": "Accuse"},
+    "sinestro": {"label": "Construct", "trigger": "phase", "phase": "Rescue", "target_phase": "Accuse"},
+    "dr_alchemy": {"label": "Blackout", "trigger": "phase", "phase": None, "target_phase": "Eliminate"},
+    "pete_ross": {"label": "Turn the Earth", "trigger": "eliminated", "phase": None, "target_phase": "Eliminate"},
+    "lana_lang": {"label": "Turn the Earth", "trigger": "eliminated", "phase": None, "target_phase": "Eliminate"},
+}
+
+
+def round_change_button_state(cid):
+    """Whether this character's round-change request button should be
+    enabled right now, for whoever is playing them."""
+    info = ROUND_CHANGE_ABILITIES.get(cid)
+    if not info:
+        return None
+    st = GAME["characters"].get(cid, {})
+    if not st.get("active"):
+        return None
+    if info["trigger"] == "eliminated":
+        enabled = bool(st.get("eliminated"))
+    else:
+        current_phase = PHASES[GAME["phase_index"]] if GAME["phase_index"] is not None else None
+        enabled = info["phase"] is None or current_phase == info["phase"]
+    pending = GAME["round_change_requests"].get(cid)
+    return {
+        "label": info["label"],
+        "target_phase": info["target_phase"],
+        "enabled": enabled and not pending,
+        "pending": bool(pending),
+    }
 
 # James Gordon and Maggie Sawyer's "Citizen's Arrest" blocks Discuss/Vote/
 # Accuse specifically. Robin, Batgirl, and Zatanna's abilities are broader -
@@ -239,6 +281,8 @@ ARREST_INFO = {
 }
 
 
+# ------------------------------------------------------------------------
+# ------------------------------------------------------------------------
 def _ability_visible_to_player(ability_text, revealed):
     """Card text for switch characters tags each ability with which state
     it belongs to (e.g. "*Type: Civilian only", "**Type: Hero only"). An
@@ -276,6 +320,34 @@ def vote_candidates():
         st["player_name"] for st in GAME["characters"].values()
         if st["active"] and st.get("player_name")
     ]
+
+
+def active_speedster_count(exclude_cid=None):
+    """How many active characters are tagged Speedster - Zoom's card
+    needs this number to resolve his 'gains one hostage per speedster'
+    passive. Excludes exclude_cid (Zoom shouldn't count himself)."""
+    return sum(
+        1 for cid, st in GAME["characters"].items()
+        if st["active"] and CHARACTERS_BY_ID.get(cid, {}).get("is_speedster")
+        and cid != exclude_cid
+    )
+
+
+# Zod, Faora, and Reign all have a "For every Kryptonian in play... gains
+# one target" passive. Their card text lists examples (Superman, Krypto,
+# Doomsday) but never themselves, so - same pattern as Zoom's Speed
+# Thief - each excludes themselves from their own count.
+KRYPTONIAN_COUNT_CHARACTERS = {"zod", "faora", "reign"}
+
+
+def active_kryptonian_count(exclude_cid=None):
+    """How many active characters are tagged Kryptonian, excluding
+    exclude_cid (a Kryptonian villain shouldn't count themselves)."""
+    return sum(
+        1 for cid, st in GAME["characters"].items()
+        if st["active"] and CHARACTERS_BY_ID.get(cid, {}).get("is_kryptonian")
+        and cid != exclude_cid
+    )
 
 
 def eliminate_candidates():
@@ -627,6 +699,10 @@ def public_state(reveal_names):
         "spotlight_characters": spotlight_characters(),
         "super_active_characters": super_active_characters(),
         "draft_characters": draft_characters(),
+        "active_speedster_count": active_speedster_count(exclude_cid="zoom"),
+        "kryptonian_counts": {
+            cid: active_kryptonian_count(exclude_cid=cid) for cid in KRYPTONIAN_COUNT_CHARACTERS
+        },
         "hostage_event": GAME["hostage_event"],
         "game_over": GAME["game_over"],
         "timer": GAME["timer"],
@@ -649,6 +725,7 @@ def public_state(reveal_names):
         state["active_alchemist_cid"] = GAME["active_alchemist_cid"]
         state["active_arrester_cid"] = GAME["active_arrester_cid"]
         state["eligible_arresters"] = eligible_arresters()
+        state["round_change_requests"] = GAME["round_change_requests"]
     return state
 
 
@@ -1069,19 +1146,20 @@ def on_set_round(data):
     broadcast()
 
 
-@socketio.on("set_phase")
-def on_set_phase(data):
+def _set_phase_by_index(idx, error_sid=None):
+    """Core phase-transition logic, shared between the host's direct
+    phase-strip clicks and approved round-change requests."""
     old_phase = PHASES[GAME["phase_index"]] if GAME["phase_index"] is not None else None
-    idx = data.get("phase_index")
 
     if idx is not None and PHASES[idx] == "Accuse":
         has_targeted = any(st["active"] and st["targeted"] for st in GAME["characters"].values())
         if not has_targeted:
-            socketio.emit("character_limit_error", {
-                "message": "Select Teleport (\u201cTargeted for Teleportation\u201d) for at "
-                           "least one player before moving to Accuse!."
-            }, room=request.sid)
-            return
+            if error_sid:
+                socketio.emit("character_limit_error", {
+                    "message": "Select Teleport (\u201cTargeted for Teleportation\u201d) for at "
+                               "least one player before moving to Accuse!."
+                }, room=error_sid)
+            return False
 
     if old_phase == "Vote":
         tally = vote_tally()
@@ -1110,6 +1188,67 @@ def on_set_phase(data):
     push_arrest_reminders()
     if idx is not None and PHASES[idx] == "Secret Identity":
         push_secret_identity_reveals()
+    return True
+
+
+@socketio.on("set_phase")
+def on_set_phase(data):
+    _set_phase_by_index(data.get("phase_index"), error_sid=request.sid)
+
+
+@socketio.on("request_round_change")
+def on_request_round_change(data):
+    """A player clicks their round-change ability button on My Card.
+    Only queues a request for the host to approve - never changes the
+    phase directly."""
+    cid = data.get("id")
+    requester_name = (data.get("player") or "").strip()
+    info = ROUND_CHANGE_ABILITIES.get(cid)
+    if not info or not requester_name:
+        return
+    actual_cid = find_player_character_id(requester_name)
+    if actual_cid != cid:
+        return  # someone other than the assigned player tried to trigger this
+    state = round_change_button_state(cid)
+    if not state or not state["enabled"]:
+        return  # not currently eligible - ignore
+    GAME["round_change_requests"][cid] = {
+        "label": info["label"],
+        "target_phase": info["target_phase"],
+        "player_name": requester_name,
+    }
+    log_activity(f"{display_name_for(cid)} requested Watchtower approval: "
+                 f"{info['label']} \u2192 {info['target_phase']}!")
+    broadcast()
+
+
+@socketio.on("resolve_round_change")
+def on_resolve_round_change(data):
+    """Host approves or dismisses a pending round-change request."""
+    cid = data.get("id")
+    approve = bool(data.get("approve"))
+    pending = GAME["round_change_requests"].pop(cid, None)
+    if not pending:
+        return
+    player_name = pending["player_name"]
+    sid = _sid_for_player(player_name)
+    if approve:
+        idx = PHASES.index(pending["target_phase"])
+        log_activity(f"Watchtower approved {display_name_for(cid)}'s {pending['label']} request")
+        _set_phase_by_index(idx)
+        if sid:
+            socketio.emit("condition_alert", {
+                "title": "Approved!",
+                "body": f"Watchtower approved your {pending['label']} request.",
+            }, room=sid)
+    else:
+        log_activity(f"Watchtower denied {display_name_for(cid)}'s {pending['label']} request")
+        if sid:
+            socketio.emit("condition_alert", {
+                "title": "Request Denied",
+                "body": f"Watchtower denied your {pending['label']} request.",
+            }, room=sid)
+    broadcast()
 
 
 @socketio.on("clear_all_characters")
@@ -1393,6 +1532,30 @@ def on_toggle_protection(data):
         broadcast()
 
 
+LOYAL_COMPANION_IDS = {"krypto", "streaky"}
+
+
+def check_house_of_el_condition():
+    """Krypto's and Streaky's 'Loyal Companion' passive: they're only
+    eliminated once every active House of El member (Superman, Supergirl,
+    Superboy) has themselves been Eliminated. Only meaningful if at least
+    one House of El member is actually in play."""
+    house = [
+        cid for cid, st in GAME["characters"].items()
+        if st["active"] and CHARACTERS_BY_ID.get(cid, {}).get("is_house_of_el")
+    ]
+    if not house or not all(GAME["characters"][cid]["eliminated"] for cid in house):
+        return
+    for cid in LOYAL_COMPANION_IDS:
+        st = GAME["characters"].get(cid)
+        if st and st["active"]:
+            st["active"] = False
+            st["last_action"] = None
+            for cond in CONDITIONS.values():
+                st[cond["flag"]] = False
+            log_activity(f"{display_name_for(cid)} deactivated - all of House of El has been eliminated")
+
+
 @socketio.on("character_action")
 def on_character_action(data):
     cid, action = data["id"], data["action"]
@@ -1421,6 +1584,8 @@ def on_character_action(data):
             st[cond["flag"]] = not st[cond["flag"]]
             if st[cond["flag"]]:
                 push_condition_alert(cid, cond["title"], cond["body"])
+        if action == "end":
+            check_house_of_el_condition()
     broadcast()
     check_win_condition()
 
@@ -1553,13 +1718,18 @@ def on_get_my_card(data):
         )
     socketio.emit("my_card_result", {
         "assigned": True,
+        "id": cid,
         "character": display_name_for(cid),
         "card": card,
         "team": char.get("team"),
         "is_kryptonian": char.get("is_kryptonian", False),
+        "is_speedster": char.get("is_speedster", False),
         "fury": bool(st.get("fury")),
         "starro": bool(st.get("starro")),
         "lobo_tracker": GAME["lobo_tracker"] if cid == "lobo" else None,
+        "speedster_count": active_speedster_count(exclude_cid="zoom") if cid == "zoom" else None,
+        "kryptonian_count": active_kryptonian_count(exclude_cid=cid) if cid in KRYPTONIAN_COUNT_CHARACTERS else None,
+        "round_change": round_change_button_state(cid),
     }, room=request.sid)
 
 
@@ -1995,6 +2165,7 @@ def on_new_game():
     GAME["active_alchemist_cid"] = None
     GAME["pending_alchemy"] = None
     GAME["active_arrester_cid"] = None
+    GAME["round_change_requests"] = {}
     # Player roster is left exactly as the host set it up via the New Game
     # dialog (remove/add/remove-all) - no automatic repopulation here.
     log_activity("New game started")
