@@ -373,6 +373,24 @@ function buildCharRow(c) {
     controls.appendChild(arrestBtn);
   }
 
+  if (["dr_caitlin_snow", "leslie_thompkins", "dr_harleen_quinzel"].includes(c.id)) {
+    const doctorBtn = document.createElement("button");
+    doctorBtn.className = "action-btn reveal-btn";
+    doctorBtn.title = "Send a list of Eliminated players to try to restore (Report! phase only)";
+    doctorBtn.textContent = "Send Good Doctor Prompt";
+    doctorBtn.onclick = () => socket.emit("send_good_doctor_prompt", { id: c.id });
+    controls.appendChild(doctorBtn);
+  }
+
+  if (["plastic_man", "zatanna"].includes(c.id)) {
+    const rosterBtn = document.createElement("button");
+    rosterBtn.className = "action-btn reveal-btn";
+    rosterBtn.title = "Show this player the full Character-to-Player roster for 10 seconds (Round 3+)";
+    rosterBtn.textContent = "Show Secret Roster (10s)";
+    rosterBtn.onclick = () => socket.emit("send_secret_roster", { id: c.id });
+    controls.appendChild(rosterBtn);
+  }
+
   if (c.id === "dr_alchemy") {
     const alchemyBtn = document.createElement("button");
     alchemyBtn.className = "action-btn reveal-btn";
@@ -453,6 +471,7 @@ socket.on("state", (state) => {
   renderPlayersPanel(state);
   renderHostageBanner(state);
   renderRoundChangeBanners(state);
+  renderGoodDoctorBanners(state);
   if (state.game_over) {
     document.getElementById("gameover-banner-title").textContent = state.game_over.title;
     document.getElementById("gameover-banner-message").textContent = state.game_over.message;
@@ -988,6 +1007,31 @@ function renderRoundChangeBanners(state) {
         <div class="hostage-banner-buttons">
           <button class="btn-primary" style="margin:0" onclick="socket.emit('resolve_round_change', {id: '${cid}', approve: true})">Approve</button>
           <button class="btn-ghost" style="margin:0" onclick="socket.emit('resolve_round_change', {id: '${cid}', approve: false})">Deny</button>
+        </div>
+      </div>`;
+  }).join("");
+}
+
+function renderGoodDoctorBanners(state) {
+  const container = document.getElementById("good-doctor-banners");
+  const requests = state.good_doctor_requests || {};
+  const ids = Object.keys(requests);
+  if (!ids.length) {
+    container.innerHTML = "";
+    return;
+  }
+  container.innerHTML = ids.map(targetCid => {
+    const req = requests[targetCid];
+    const targetName = (state.characters[targetCid] || {}).display_name
+      || (CHARACTERS.find(x => x.id === targetCid) || {}).name || targetCid;
+    const doctorName = (state.characters[req.doctor_cid] || {}).display_name
+      || (CHARACTERS.find(x => x.id === req.doctor_cid) || {}).name || req.doctor_cid;
+    return `
+      <div class="hostage-banner" style="display:flex">
+        <div><b>${doctorName}</b> (${req.doctor_name}) wants to restore <b>${targetName}</b> with A Good Doctor.</div>
+        <div class="hostage-banner-buttons">
+          <button class="btn-primary" style="margin:0" onclick="socket.emit('resolve_good_doctor', {target_id: '${targetCid}', approve: true})">Approve</button>
+          <button class="btn-ghost" style="margin:0" onclick="socket.emit('resolve_good_doctor', {target_id: '${targetCid}', approve: false})">Deny</button>
         </div>
       </div>`;
   }).join("");

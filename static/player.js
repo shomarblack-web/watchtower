@@ -264,6 +264,62 @@ function closeArrestConfirm() {
   hideOverlay("arrest-confirm-overlay");
 }
 
+// ---- A Good Doctor (Dr. Caitlin Snow, Leslie Thompkins, Dr. Harleen Quinzel) ----
+socket.on("good_doctor_prompt", (data) => {
+  const list = document.getElementById("good-doctor-candidate-list");
+  const candidates = data.candidates || [];
+  list.innerHTML = candidates.length
+    ? candidates.map(name => `<div class="hostage-target" data-name="${name}">${name}</div>`).join("")
+    : `<div class="empty">No one is currently Eliminated.</div>`;
+  list.querySelectorAll(".hostage-target").forEach(el => {
+    el.addEventListener("click", () => {
+      socket.emit("submit_good_doctor_target", { doctor: myName, target_name: el.dataset.name });
+      hideOverlay("good-doctor-prompt-overlay");
+      document.getElementById("good-doctor-confirm-text").textContent =
+        `You asked Watchtower to restore ${el.dataset.name}.`;
+      showOverlay("good-doctor-confirm-overlay");
+    });
+  });
+  showOverlay("good-doctor-prompt-overlay");
+});
+
+function closeGoodDoctorConfirm() {
+  hideOverlay("good-doctor-confirm-overlay");
+}
+
+// ---- Secret Identity roster view (Plastic Man's Petty Thief, Zatanna's
+// Thgiels fo Dnah) - view-only, auto-dismisses after 10 seconds ----
+let secretRosterTimer = null;
+socket.on("secret_roster_view", (data) => {
+  const list = document.getElementById("secret-roster-list");
+  const entries = data.entries || [];
+  list.innerHTML = entries.length
+    ? entries.map(e => `<div class="hostage-target" style="cursor:default">${e.player} is ${e.character}</div>`).join("")
+    : `<div class="empty">No one is currently assigned.</div>`;
+  showOverlay("secret-roster-overlay");
+
+  let remaining = 10;
+  const countdownEl = document.getElementById("secret-roster-countdown");
+  const barEl = document.getElementById("secret-roster-bar");
+  countdownEl.textContent = remaining;
+  barEl.style.transition = "none";
+  barEl.style.width = "100%";
+  // Force reflow so the next width change animates smoothly from 100%.
+  void barEl.offsetWidth;
+  barEl.style.transition = "width 1s linear";
+  if (secretRosterTimer) clearInterval(secretRosterTimer);
+  secretRosterTimer = setInterval(() => {
+    remaining -= 1;
+    countdownEl.textContent = Math.max(remaining, 0);
+    barEl.style.width = `${Math.max(remaining, 0) * 10}%`;
+    if (remaining <= 0) {
+      clearInterval(secretRosterTimer);
+      secretRosterTimer = null;
+      hideOverlay("secret-roster-overlay");
+    }
+  }, 1000);
+});
+
 // ---- Round-change requests (Mind Merge, Blackout, Altering the
 // Timeline, Loyal Assistant, Construct, Turn the Earth) ----
 function renderRoundChangeButton(rc) {

@@ -173,6 +173,8 @@ GAME = {
     "pending_alchemy": None,
     "active_arrester_cid": None,
     "round_change_requests": {},
+    "active_good_doctor_cid": None,
+    "good_doctor_requests": {},
 }
 
 
@@ -238,6 +240,55 @@ def round_change_button_state(cid):
         "enabled": enabled and not pending,
         "pending": bool(pending),
     }
+
+
+# "A Good Doctor" - Report! phase, targets an Eliminated player to bring
+# back. For Dr. Caitlin Snow and Dr. Harleen Quinzel this only works
+# before they've switched to their villain form (Civilian-only per their
+# card); Leslie Thompkins has no such restriction.
+GOOD_DOCTOR_CHARACTERS = {"dr_caitlin_snow", "leslie_thompkins", "dr_harleen_quinzel"}
+
+
+def good_doctor_available(cid):
+    """Whether this doctor can currently use A Good Doctor - active,
+    Report! phase, and (for switch characters) not yet revealed."""
+    if cid not in GOOD_DOCTOR_CHARACTERS:
+        return False
+    st = GAME["characters"].get(cid, {})
+    if not st.get("active"):
+        return False
+    if CHARACTERS_BY_ID.get(cid, {}).get("is_switchable") and st.get("revealed"):
+        return False
+    current_phase = PHASES[GAME["phase_index"]] if GAME["phase_index"] is not None else None
+    return current_phase == "Report"
+
+
+# "Petty Thief" (Plastic Man) and "Thgiels fo Dnah" (Zatanna) - both Super
+# Abilities that let the player view the full Character-to-Player roster
+# for 10 seconds. Zatanna's is Inspect!-tagged; Plastic Man's has no
+# phase restriction. Both are still gated to Round 3+ like any other
+# Super Ability.
+SECRET_ROSTER_CHARACTERS = {"plastic_man", "zatanna"}
+
+
+def secret_roster_available(cid):
+    """Whether this character can currently trigger the 10s Secret
+    Identity roster view - active, Round 3+, and (if phase-tagged) in
+    the right phase."""
+    if cid not in SECRET_ROSTER_CHARACTERS:
+        return False
+    st = GAME["characters"].get(cid, {})
+    if not st.get("active") or GAME["round"] < 3:
+        return False
+    ability_text = real_super_ability(cid)
+    if not ability_text:
+        return False
+    tagged_phases = ABILITY_PHASE_MAP.get(cid, {})
+    is_phase_tagged = any(ability_text in phase_list for phase_list in tagged_phases.values())
+    if not is_phase_tagged:
+        return True  # e.g. Plastic Man - no phase tag at all on this ability
+    current_phase = PHASES[GAME["phase_index"]] if GAME["phase_index"] is not None else None
+    return ability_text in tagged_phases.get(current_phase, [])
 
 # James Gordon and Maggie Sawyer's "Citizen's Arrest" blocks Discuss/Vote/
 # Accuse specifically. Robin, Batgirl, and Zatanna's abilities are broader -
@@ -726,6 +777,8 @@ def public_state(reveal_names):
         state["active_arrester_cid"] = GAME["active_arrester_cid"]
         state["eligible_arresters"] = eligible_arresters()
         state["round_change_requests"] = GAME["round_change_requests"]
+        state["active_good_doctor_cid"] = GAME["active_good_doctor_cid"]
+        state["good_doctor_requests"] = GAME["good_doctor_requests"]
     return state
 
 
@@ -1812,6 +1865,119 @@ def exposed_player_names(exclude_name=None):
     return names
 
 
+def full_character_roster():
+    """{player_name: character_name} for every active, assigned character -
+    what Plastic Man's Petty Thief and Zatanna's Thgiels fo Dnah reveal."""
+    return [
+        {"player": st["player_name"], "character": display_name_for(cid)}
+        for cid, st in GAME["characters"].items()
+        if st["active"] and st.get("player_name")
+    ]
+
+
+@socketio.on("send_secret_roster")
+def on_send_secret_roster(data):
+    """Host triggers Plastic Man's/Zatanna's Super Ability - the player
+    immediately sees the full Character-to-Player roster for 10 seconds.
+    No approval step needed, it's a pure view."""
+    cid = data.get("id")
+    if not secret_roster_available(cid):
+        return
+    pname = (GAME["characters"][cid].get("player_name") or "").strip()
+    sid = _sid_for_player(pname) if pname else None
+    if sid:
+        socketio.emit("secret_roster_view", {"entries": full_character_roster()}, room=sid)
+    log_activity(f"{display_name_for(cid)} viewed the Secret Identity roster (10s)")
+    broadcast()
+
+
+def eliminated_player_names():
+    """Real names of every active, assigned, currently-Eliminated player -
+    the pool a Good Doctor can propose restoring."""
+    return [
+        st["player_name"] for cid, st in GAME["characters"].items()
+        if st["active"] and st.get("player_name") and st.get("eliminated")
+    ]
+
+
+@socketio.on("send_good_doctor_prompt")
+def on_send_good_doctor_prompt(data):
+    """Host invites Dr. Caitlin Snow/Leslie Thompkins/Dr. Harleen Quinzel
+    to silently pick an Eliminated player to try to restore."""
+    cid = data.get("id")
+    if not good_doctor_available(cid):
+        return
+    st = GAME["characters"][cid]
+    GAME["active_good_doctor_cid"] = cid
+    pname = (st.get("player_name") or "").strip()
+    sid = _sid_for_player(pname) if pname else None
+    if sid:
+        socketio.emit("good_doctor_prompt", {
+            "candidates": eliminated_player_names()
+        }, room=sid)
+    log_activity(f"{display_name_for(cid)} was invited to try to restore an Eliminated player")
+    broadcast()
+
+
+@socketio.on("submit_good_doctor_target")
+def on_submit_good_doctor_target(data):
+    """The doctor's player privately submits who they want to restore.
+    Queues a private request for the host to approve - nothing changes
+    until Watchtower clicks OK."""
+    doctor_name = (data.get("doctor") or "").strip()
+    target_name = (data.get("target_name") or "").strip()
+    if not doctor_name or not target_name:
+        return
+    doctor_cid = find_player_character_id(doctor_name)
+    if not doctor_cid or doctor_cid != GAME["active_good_doctor_cid"]:
+        return
+    target_cid = find_player_character_id(target_name)
+    target_st = GAME["characters"].get(target_cid)
+    if not target_cid or not target_st or not target_st["active"] or not target_st.get("eliminated"):
+        return
+    GAME["active_good_doctor_cid"] = None
+    GAME["good_doctor_requests"][target_cid] = {"doctor_cid": doctor_cid, "doctor_name": doctor_name}
+    log_activity(f"{display_name_for(doctor_cid)} asked Watchtower to restore {display_name_for(target_cid)}")
+    broadcast()
+
+
+@socketio.on("resolve_good_doctor")
+def on_resolve_good_doctor(data):
+    """Host approves or denies a pending Good Doctor restoration."""
+    target_cid = data.get("target_id")
+    approve = bool(data.get("approve"))
+    pending = GAME["good_doctor_requests"].pop(target_cid, None)
+    if not pending:
+        return
+    doctor_cid = pending["doctor_cid"]
+    doctor_sid = _sid_for_player(pending["doctor_name"])
+    target_st = GAME["characters"].get(target_cid)
+    if approve and target_st:
+        target_st["eliminated"] = False
+        target_st["active"] = True
+        if target_st.get("health") is not None:
+            target_st["health"] = min(MAX_HEALTH, target_st["health"] + 1)
+        log_activity(f"Watchtower approved - {display_name_for(target_cid)} was restored by "
+                     f"{display_name_for(doctor_cid)}'s A Good Doctor")
+        push_condition_alert(target_cid, "Restored!",
+                              f"{display_name_for(doctor_cid)} brought you back. You regain "
+                              f"consciousness with at least one heart renewed.")
+        if doctor_sid:
+            socketio.emit("condition_alert", {
+                "title": "Approved!",
+                "body": f"Watchtower approved your A Good Doctor request - "
+                        f"{display_name_for(target_cid)} is restored.",
+            }, room=doctor_sid)
+    else:
+        log_activity(f"Watchtower denied restoring {display_name_for(target_cid)}")
+        if doctor_sid:
+            socketio.emit("condition_alert", {
+                "title": "Request Denied",
+                "body": f"Watchtower denied your A Good Doctor request for {display_name_for(target_cid)}.",
+            }, room=doctor_sid)
+    broadcast()
+
+
 @socketio.on("send_absorption_prompt")
 def on_send_absorption_prompt(data):
     """Host invites Parasite to silently pick one Exposed player to
@@ -2166,6 +2332,8 @@ def on_new_game():
     GAME["pending_alchemy"] = None
     GAME["active_arrester_cid"] = None
     GAME["round_change_requests"] = {}
+    GAME["active_good_doctor_cid"] = None
+    GAME["good_doctor_requests"] = {}
     # Player roster is left exactly as the host set it up via the New Game
     # dialog (remove/add/remove-all) - no automatic repopulation here.
     log_activity("New game started")

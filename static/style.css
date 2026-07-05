@@ -680,6 +680,17 @@ body{
   text-transform:uppercase; color: var(--amber); margin: 10px 0 24px; letter-spacing:.03em;
 }
 .reveal-buttons{ display:flex; flex-direction:column; gap:8px; }
+.secret-roster-countdown{
+  font-family:'Rajdhani',sans-serif; font-weight:800; font-size:56px; line-height:1;
+  color: var(--amber); text-align:center; margin: 6px 0 4px;
+}
+.secret-roster-bar-track{
+  width:100%; height:6px; border-radius:3px; background: rgba(255,255,255,.1); overflow:hidden; margin-bottom:16px;
+}
+.secret-roster-bar{
+  height:100%; width:100%; background: var(--amber); border-radius:3px;
+  transition: width 1s linear;
+}
 
 /* ---------- phase reminder toast ---------- */
 .phase-toast{
