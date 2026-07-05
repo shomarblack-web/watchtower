@@ -75,6 +75,11 @@
     </div>
 
     <div class="panel">
+      <h3>Seating Chart</h3>
+      <div id="seating-diagram"></div>
+    </div>
+
+    <div class="panel">
       <h3>Vote Tally <span class="mono" id="vote-count" style="color:var(--muted)"></span></h3>
       <div id="tally"><div class="empty">No votes cast this phase.</div></div>
       <button class="btn-ghost" title="Reset vote tally" onclick="socket.emit('reset_votes')">Clear votes</button>

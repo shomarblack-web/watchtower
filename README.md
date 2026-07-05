@@ -1,5 +1,36 @@
 # White Martian — Watchtower (Web Edition)
 
+## New: Seating Arrangement
+
+Built and tested end-to-end (backend logic, then confirmed live through
+real browser sessions). Models the physical circle of chairs the game
+was designed around, with Watchtower (the host) sitting outside it.
+
+- **Seats assigned during Shuffle** — same button as character shuffle,
+  per your call. Seat count always matches the number of registered
+  players (confirmed it grows/reseats if that count changes) and stays
+  fixed on later reshuffles (confirmed characters can redeal without
+  moving anyone's seat).
+- **Circular diagram** for both host and player, each seat showing the
+  first two letters of the player's name. Player's own view highlights
+  their own seat in gold.
+- **The Flash's "Fastest Man Alive"** actually swaps seats now (previously
+  he was miscategorized as a generic shield-filler, which didn't match
+  his card at all — fixed). The swap is announced publicly to every
+  player and the host, by design — it's meant to be a visible tell.
+- **Green Lantern's "Green Lantern's Light"** silently shields his two
+  seat-neighbors when Eliminate phase ends, with zero immediate
+  notification — confirmed they only find out via a delayed alert at the
+  start of the following Report phase, exactly as described.
+- **Plastic Man's "Group Hug"** lets him pick Left or Right; the two
+  players in that direction get shielded with no notification at all,
+  ever — confirmed directly.
+
+**Also corrected**: Green Lantern and Plastic Man were both in the
+generic "fills a protection dot" shield system too, which didn't match
+either of their actual card text. Removed both, since they now have
+their own bespoke mechanics above.
+
 ## New: Arrested! condition (Citizen's Arrest / Forget the Rules)
 
 Built and tested end-to-end across a real round transition. Host sends a

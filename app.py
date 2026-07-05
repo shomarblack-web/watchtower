@@ -177,8 +177,14 @@ GAME = {
     "pending_alchemy": None,
     "active_arrester_cid": None,
     "round_change_requests": {},
+    "seats": [],
+    "pending_gl_reveals": [],
+    "plastic_man_shielded": [],
     "active_good_doctor_cid": None,
     "good_doctor_requests": {},
+    "active_telepathy_cid": None,
+    "telepathic_links": {"martian_manhunter": [], "miss_martian": []},
+    "liar_decoys": {},
 }
 
 
@@ -756,6 +762,7 @@ def public_state(reveal_names):
         "num_rounds": NUM_ROUNDS,
         "phase_index": GAME["phase_index"],
         "phases": PHASES,
+        "seats": GAME["seats"],
         "characters": characters,
         "tally": vote_tally(),
         "vote_count": len(GAME["votes"]),
@@ -771,6 +778,12 @@ def public_state(reveal_names):
         "kryptonian_counts": {
             cid: active_kryptonian_count(exclude_cid=cid) for cid in KRYPTONIAN_COUNT_CHARACTERS
         },
+        "green_lantern_neighbors": (
+            [n for n in seat_neighbors(
+                (GAME["characters"].get("green_lantern", {}).get("player_name") or "").strip()
+            ) if n] if GAME["characters"].get("green_lantern", {}).get("active") else []
+        ),
+        "plastic_man_shielded": GAME["plastic_man_shielded"],
         "hostage_event": GAME["hostage_event"],
         "game_over": GAME["game_over"],
         "timer": GAME["timer"],
@@ -796,6 +809,8 @@ def public_state(reveal_names):
         state["round_change_requests"] = GAME["round_change_requests"]
         state["active_good_doctor_cid"] = GAME["active_good_doctor_cid"]
         state["good_doctor_requests"] = GAME["good_doctor_requests"]
+        state["active_telepathy_cid"] = GAME["active_telepathy_cid"]
+        state["telepathic_links"] = GAME["telepathic_links"]
     return state
 
 
@@ -927,6 +942,9 @@ def check_win_condition():
         return
     if chars.get("martian_manhunter", {}).get("exposed"):
         _end_game("Martians", "WHITE MARTIANS WIN!", "Martian Manhunter was Exposed!")
+        return
+    if chars.get("martian_manhunter", {}).get("eliminated"):
+        _end_game("Martians", "WHITE MARTIANS WIN!", "Martian Manhunter was Eliminated!")
         return
     if heroes and all(chars[c]["eliminated"] for c in heroes) and not all_civilians_rescued:
         _end_game("Martians", "WHITE MARTIANS WIN!",
@@ -1248,12 +1266,21 @@ def _set_phase_by_index(idx, error_sid=None):
         GAME["pending_alchemy"] = None
         if GAME["active_arrester_cid"] and ARREST_INFO.get(GAME["active_arrester_cid"], {}).get("phase") == "Inspect":
             GAME["active_arrester_cid"] = None
+        GAME["active_telepathy_cid"] = None
     if old_phase == "Protect" and (idx is None or PHASES[idx] != "Protect"):
         GAME["active_protector_cid"] = None
     if old_phase == "Accuse" and (idx is None or PHASES[idx] != "Accuse"):
         GAME["active_absorber_cid"] = None
         if GAME["active_arrester_cid"] and ARREST_INFO.get(GAME["active_arrester_cid"], {}).get("phase") == "Accuse":
             GAME["active_arrester_cid"] = None
+    if old_phase == "Eliminate" and (idx is None or PHASES[idx] != "Eliminate"):
+        gl_st = GAME["characters"].get("green_lantern")
+        if gl_st and gl_st["active"]:
+            gl_pname = (gl_st.get("player_name") or "").strip()
+            left, right = seat_neighbors(gl_pname) if gl_pname else (None, None)
+            for neighbor in (left, right):
+                if neighbor and neighbor not in GAME["pending_gl_reveals"]:
+                    GAME["pending_gl_reveals"].append(neighbor)
     GAME["phase_index"] = idx
     if idx is not None:
         log_activity(f"Phase: {PHASES[idx]}!")
@@ -1262,6 +1289,17 @@ def _set_phase_by_index(idx, error_sid=None):
         if PHASES[idx] == "Protect":
             for st in GAME["characters"].values():
                 st["protection"] = [False, False, False]
+        if PHASES[idx] == "Report" and GAME["pending_gl_reveals"]:
+            for pname in GAME["pending_gl_reveals"]:
+                sid = _sid_for_player(pname)
+                if sid:
+                    socketio.emit("condition_alert", {
+                        "title": "Shielded by the Light!",
+                        "body": "Green Lantern's Light automatically shielded you from "
+                                "elimination last round - you were seated right beside them.",
+                    }, room=sid)
+            log_activity(f"Green Lantern's Light reveal: {', '.join(GAME['pending_gl_reveals'])}")
+            GAME["pending_gl_reveals"] = []
     broadcast()
     push_phase_reminders()
     push_phase_guide()
@@ -1407,8 +1445,14 @@ def on_adjust_health(data):
     st = GAME["characters"].get(cid)
     if not st or st["health"] is None:
         return
+    old_health = st["health"]
     st["health"] = max(0, min(MAX_HEALTH, st["health"] + delta))
     log_activity(f"{CHARACTERS_BY_ID[cid]['name']} health: {st['health']}")
+    if st["health"] < old_health:
+        pname = (st.get("player_name") or "").strip()
+        sid = _sid_for_player(pname) if pname else None
+        if sid:
+            socketio.emit("hp_lost", {"new_health": st["health"]}, room=sid)
     broadcast()
 
 
@@ -1698,6 +1742,144 @@ def on_toggle_player_eliminated(data):
     broadcast()
 
 
+def ensure_seating():
+    """Assigns a fresh random circular seating arrangement if the seat
+    count doesn't match the current player count (first time, or players
+    joined/left) - otherwise leaves the existing arrangement untouched,
+    since people don't get up and change chairs just because characters
+    got redealt."""
+    players = [p["name"] for p in GAME["players"]]
+    if len(GAME["seats"]) != len(players):
+        shuffled = players[:]
+        random.shuffle(shuffled)
+        GAME["seats"] = shuffled
+
+
+def seat_index(player_name):
+    name = player_name.strip().lower()
+    for i, seated in enumerate(GAME["seats"]):
+        if seated.strip().lower() == name:
+            return i
+    return None
+
+
+def seat_neighbors(player_name):
+    """(left_name, right_name) seated beside this player, or (None, None)
+    if they're not currently seated."""
+    idx = seat_index(player_name)
+    if idx is None or len(GAME["seats"]) < 2:
+        return None, None
+    n = len(GAME["seats"])
+    return GAME["seats"][(idx - 1) % n], GAME["seats"][(idx + 1) % n]
+
+
+def swap_seats(name_a, name_b):
+    ia, ib = seat_index(name_a), seat_index(name_b)
+    if ia is None or ib is None:
+        return False
+    GAME["seats"][ia], GAME["seats"][ib] = GAME["seats"][ib], GAME["seats"][ia]
+    return True
+
+
+def two_seats_in_direction(player_name, direction):
+    """The two nearest players in the given direction ('left' or
+    'right') from player_name's seat - Plastic Man's Group Hug."""
+    idx = seat_index(player_name)
+    n = len(GAME["seats"])
+    if idx is None or n < 3:
+        return []
+    step = -1 if direction == "left" else 1
+    return [GAME["seats"][(idx + step) % n], GAME["seats"][(idx + 2 * step) % n]]
+
+
+@socketio.on("send_plastic_man_prompt")
+def on_send_plastic_man_prompt(data):
+    """Host invites Plastic Man to choose Left or Right for Group Hug -
+    no phase restriction, matches his card text."""
+    cid = data.get("id")
+    if cid != "plastic_man":
+        return
+    st = GAME["characters"].get(cid)
+    if not st or not st["active"]:
+        return
+    pname = (st.get("player_name") or "").strip()
+    sid = _sid_for_player(pname) if pname else None
+    if sid:
+        socketio.emit("plastic_man_prompt", {}, room=sid)
+    log_activity(f"{display_name_for(cid)} was invited to choose a Group Hug direction")
+    broadcast()
+
+
+@socketio.on("submit_plastic_man_choice")
+def on_submit_plastic_man_choice(data):
+    """Plastic Man's player privately picks Left or Right. The two
+    players in that direction are silently shielded - per the card,
+    they never receive any notification about it."""
+    pm_name = (data.get("plastic_man") or "").strip()
+    direction = data.get("direction")
+    if not pm_name or direction not in ("left", "right"):
+        return
+    pm_cid = find_player_character_id(pm_name)
+    if pm_cid != "plastic_man":
+        return
+    targets = two_seats_in_direction(pm_name, direction)
+    GAME["plastic_man_shielded"] = targets
+    log_activity(f"{pm_name} (Plastic Man) used Group Hug to the {direction} - "
+                 f"{', '.join(targets) if targets else 'no one (not enough seats)'} silently shielded")
+    broadcast()
+
+
+
+@socketio.on("send_speedster_swap_prompt")
+def on_send_speedster_swap_prompt(data):
+    """Host invites The Flash to silently pick who to swap seats with -
+    only usable during Protect!."""
+    cid = data.get("id")
+    if cid != "the_flash":
+        return
+    st = GAME["characters"].get(cid)
+    if not st or not st["active"]:
+        return
+    current_phase = PHASES[GAME["phase_index"]] if GAME["phase_index"] is not None else None
+    if current_phase != "Protect" or not _visible_phase_abilities(cid, "Protect"):
+        return
+    pname = (st.get("player_name") or "").strip()
+    sid = _sid_for_player(pname) if pname else None
+    if sid:
+        socketio.emit("speedster_swap_prompt", {
+            "candidates": active_player_names(exclude_name=pname)
+        }, room=sid)
+    log_activity(f"{display_name_for(cid)} was invited to swap seats with a player")
+    broadcast()
+
+
+@socketio.on("submit_speedster_swap_target")
+def on_submit_speedster_swap_target(data):
+    """The Flash's player privately submits who to swap seats with. The
+    swap itself is announced to EVERYONE - it's an obvious tell that one
+    of the two is The Flash, which is the whole point of the risk."""
+    flash_name = (data.get("flash") or "").strip()
+    target_name = (data.get("target_name") or "").strip()
+    if not flash_name or not target_name:
+        return
+    flash_cid = find_player_character_id(flash_name)
+    if flash_cid != "the_flash":
+        return
+    target_cid = find_player_character_id(target_name)
+    if not target_cid or not GAME["characters"][target_cid]["active"]:
+        return
+    if not swap_seats(flash_name, target_name):
+        return
+    log_activity(f"{flash_name} swapped seats with {target_name}! (Fastest Man Alive)")
+    socketio.emit("seat_swap_announcement", {
+        "player_a": flash_name, "player_b": target_name,
+    }, room="players")
+    socketio.emit("seat_swap_announcement", {
+        "player_a": flash_name, "player_b": target_name,
+    }, room="hosts")
+    broadcast()
+
+
 def _do_shuffle(exclude_char_ids=None):
     """Randomly reassign active characters to players, excluding any
     character ids in exclude_char_ids from both the pool being reassigned
@@ -1740,6 +1922,7 @@ def _do_shuffle(exclude_char_ids=None):
 
 @socketio.on("shuffle_characters")
 def on_shuffle_characters():
+    ensure_seating()
     error = _do_shuffle()
     if error:
         socketio.emit("shuffle_error", {"message": error}, room=request.sid)
@@ -1891,6 +2074,177 @@ def exposed_player_names(exclude_name=None):
     if exclude_name:
         names = [n for n in names if n.strip().lower() != exclude_name.strip().lower()]
     return names
+
+
+    if exclude_name:
+        names = [n for n in names if n.strip().lower() != exclude_name.strip().lower()]
+    return names
+
+
+# Martian Manhunter and Miss Martian both build their own private network
+# of Telepathically Linked heroes one at a time (Telepathic Link, Inspect!
+# phase), then can cross-reveal everyone in that network to each other at
+# once (Telepathic Team, Super Ability, Round 3+). Each Martian's network
+# is tracked separately - GAME["telepathic_links"][cid].
+TELEPATHIC_CHARACTERS = {"martian_manhunter", "miss_martian"}
+
+# Miss Tessmacher and Otis lie about their signal during Telepathic Link/
+# Team - whoever reads their signal gets a false civilian identity
+# instead of the truth. Works best when the decoy is a civilian with a
+# real hero connection (Lois Lane, Steve Trevor, etc.), and even better
+# if that hero is already part of the same Telepathic network.
+LIAR_CHARACTERS = {"miss_tessmacher", "otis"}
+
+CIVILIAN_HERO_DECOYS = {
+    cid: targets[0] for cid, targets in KNOWS_IDENTITY_OF.items()
+    if len(targets) == 1 and not targets[0].startswith("team:")
+    and CHARACTERS_BY_ID.get(cid, {}).get("team") == "civilian"
+}
+
+
+def pick_decoy_identity(network_cids):
+    """A believable false civilian identity for a lying character to be
+    mistaken for - prefers one connected to a hero already in the same
+    Telepathic network, falling back to any civilian-hero decoy."""
+    network_heroes = {
+        cid for cid in network_cids
+        if CHARACTERS_BY_ID.get(cid, {}).get("team") == "hero"
+    }
+    matches = [decoy for decoy, hero in CIVILIAN_HERO_DECOYS.items() if hero in network_heroes]
+    pool = matches or list(CIVILIAN_HERO_DECOYS.keys())
+    return random.choice(pool)
+
+
+def revealed_identity_for(cid, network_cids):
+    """What a Telepathic Link/Team participant's identity should display
+    as - the truth, unless they're a Liar, in which case a false but
+    consistent decoy identity (cached per-game so the same lie holds up
+    across both Link and Team reveals)."""
+    if cid not in LIAR_CHARACTERS:
+        return display_name_for(cid)
+    if cid not in GAME["liar_decoys"]:
+        GAME["liar_decoys"][cid] = pick_decoy_identity(network_cids)
+    return display_name_for(GAME["liar_decoys"][cid])
+
+
+def eligible_telepathic_link_targets(inspector_cid):
+    """Active players not already linked to this inspector, and not the
+    inspector themselves."""
+    linked = set(GAME["telepathic_links"].get(inspector_cid, []))
+    pname = (GAME["characters"].get(inspector_cid, {}).get("player_name") or "").strip()
+    return [
+        st["player_name"] for cid, st in GAME["characters"].items()
+        if st["active"] and st.get("player_name") and cid not in linked
+        and st["player_name"].strip().lower() != pname.lower()
+    ]
+
+
+@socketio.on("send_telepathic_link_prompt")
+def on_send_telepathic_link_prompt(data):
+    """Host invites Martian Manhunter/Miss Martian to silently pick a
+    player to 'wake' and privately exchange signals with at the table -
+    only usable during Inspect!."""
+    cid = data.get("id")
+    if cid not in TELEPATHIC_CHARACTERS:
+        return
+    st = GAME["characters"].get(cid)
+    if not st or not st["active"]:
+        return
+    current_phase = PHASES[GAME["phase_index"]] if GAME["phase_index"] is not None else None
+    if current_phase != "Inspect" or not _visible_phase_abilities(cid, "Inspect"):
+        return
+    GAME["active_telepathy_cid"] = cid
+    pname = (st.get("player_name") or "").strip()
+    sid = _sid_for_player(pname) if pname else None
+    if sid:
+        socketio.emit("telepathic_link_prompt", {
+            "candidates": eligible_telepathic_link_targets(cid)
+        }, room=sid)
+    log_activity(f"{display_name_for(cid)} was invited to Telepathically Link with a player")
+    broadcast()
+
+
+@socketio.on("submit_telepathic_link_target")
+def on_submit_telepathic_link_target(data):
+    """The Martian's player privately submits who they linked with at
+    the table - adds them to that Martian's growing network, then both
+    sides digitally exchange identities. It's a two-way risk: the Martian
+    always reveals their true self, but a lying target (Miss Tessmacher,
+    Otis) shows the Martian a false identity instead of their own."""
+    inspector_name = (data.get("inspector") or "").strip()
+    target_name = (data.get("target_name") or "").strip()
+    if not inspector_name or not target_name:
+        return
+    inspector_cid = find_player_character_id(inspector_name)
+    if not inspector_cid or inspector_cid != GAME["active_telepathy_cid"]:
+        return
+    target_cid = find_player_character_id(target_name)
+    if not target_cid or not GAME["characters"][target_cid]["active"]:
+        return
+    GAME["active_telepathy_cid"] = None
+    links = GAME["telepathic_links"].setdefault(inspector_cid, [])
+    if target_cid not in links:
+        links.append(target_cid)
+    log_activity(f"{display_name_for(inspector_cid)} Telepathically Linked with {display_name_for(target_cid)}")
+
+    network_cids = links + [inspector_cid]
+    target_sees = revealed_identity_for(target_cid, network_cids)
+    inspector_sid = _sid_for_player(inspector_name)
+    if inspector_sid:
+        socketio.emit("condition_alert", {
+            "title": "Telepathic Link!",
+            "body": f"{target_name} is {target_sees}.",
+        }, room=inspector_sid)
+    target_sid = _sid_for_player(target_name)
+    if target_sid:
+        socketio.emit("condition_alert", {
+            "title": "Telepathic Link!",
+            "body": f"{inspector_name} is {display_name_for(inspector_cid)}.",
+        }, room=target_sid)
+    broadcast()
+
+
+@socketio.on("activate_telepathic_team")
+def on_activate_telepathic_team(data):
+    """Martian Manhunter's/Miss Martian's Super Ability - cross-reveals
+    everyone in their Telepathic network to each other, all at once,
+    AND reveals the Martian's own true identity to the whole network -
+    it's a risky exchange of information. Liars (Miss Tessmacher, Otis)
+    show a false civilian identity instead of their own."""
+    cid = data.get("id")
+    if cid not in TELEPATHIC_CHARACTERS:
+        return
+    st = GAME["characters"].get(cid)
+    if not st or not st["active"] or GAME["round"] < 3 or not real_super_ability(cid):
+        return
+    current_phase = PHASES[GAME["phase_index"]] if GAME["phase_index"] is not None else None
+    if current_phase != "Inspect":
+        return
+    links = [c for c in GAME["telepathic_links"].get(cid, []) if GAME["characters"].get(c, {}).get("active")]
+    if len(links) < 2:
+        socketio.emit("character_limit_error", {
+            "message": f"{display_name_for(cid)} needs at least 2 active Telepathically "
+                       f"Linked players before Telepathic Team can cross-reveal anyone."
+        }, room=request.sid)
+        return
+    network_cids = links + [cid]
+    for viewer_cid in links:
+        sid = _sid_for_player(GAME["characters"][viewer_cid].get("player_name") or "")
+        if not sid:
+            continue
+        others = [
+            {"player": GAME["characters"][other_cid]["player_name"],
+             "character": revealed_identity_for(other_cid, network_cids)}
+            for other_cid in links if other_cid != viewer_cid
+        ]
+        others.append({
+            "player": GAME["characters"][cid]["player_name"],
+            "character": display_name_for(cid),
+        })
+        socketio.emit("telepathic_team_reveal", {"entries": others}, room=sid)
+    log_activity(f"{display_name_for(cid)} activated Telepathic Team - "
+                 f"{len(links)} linked players revealed to each other")
+    broadcast()
 
 
 def full_character_roster():
@@ -2445,6 +2799,11 @@ def on_new_game():
     GAME["round_change_requests"] = {}
     GAME["active_good_doctor_cid"] = None
     GAME["good_doctor_requests"] = {}
+    GAME["active_telepathy_cid"] = None
+    GAME["telepathic_links"] = {"martian_manhunter": [], "miss_martian": []}
+    GAME["liar_decoys"] = {}
+    GAME["pending_gl_reveals"] = []
+    GAME["plastic_man_shielded"] = []
     # Player roster is left exactly as the host set it up via the New Game
     # dialog (remove/add/remove-all) - no automatic repopulation here.
     log_activity("New game started")

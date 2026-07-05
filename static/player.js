@@ -98,9 +98,24 @@ function closeSuperOverlay() {
   hideOverlay("super-overlay");
 }
 
+// ---- vibration feedback (Android only - iOS Safari has never
+// implemented the Vibration API, so this silently does nothing there) ----
+function vibrateDevice(pattern) {
+  if (navigator.vibrate) {
+    navigator.vibrate(pattern);
+  }
+}
+
 // ---- conditions (Exposed / Eliminated / Rescued / Targeted) ----
 socket.on("condition_alert", (data) => {
+  if (data.title === "Eliminated!") {
+    vibrateDevice([200, 100, 200, 100, 400]);
+  }
   renderConditionOverlay([data]);
+});
+
+socket.on("hp_lost", (data) => {
+  vibrateDevice(150);
 });
 
 socket.on("condition_recap", (data) => {
@@ -323,6 +338,72 @@ socket.on("giraffe_reveal", (data) => {
 
 function closeGiraffeReveal() {
   hideOverlay("giraffe-reveal-overlay");
+}
+
+// ---- Telepathic Link / Telepathic Team (Martian Manhunter, Miss Martian) ----
+socket.on("telepathic_link_prompt", (data) => {
+  const list = document.getElementById("telepathic-link-candidate-list");
+  const candidates = data.candidates || [];
+  list.innerHTML = candidates.length
+    ? candidates.map(name => `<div class="hostage-target" data-name="${name}">${name}</div>`).join("")
+    : `<div class="empty">No one new is available to link with right now.</div>`;
+  list.querySelectorAll(".hostage-target").forEach(el => {
+    el.addEventListener("click", () => {
+      socket.emit("submit_telepathic_link_target", { inspector: myName, target_name: el.dataset.name });
+      hideOverlay("telepathic-link-prompt-overlay");
+    });
+  });
+  showOverlay("telepathic-link-prompt-overlay");
+});
+
+socket.on("telepathic_team_reveal", (data) => {
+  const list = document.getElementById("telepathic-team-list");
+  const entries = data.entries || [];
+  list.innerHTML = entries.length
+    ? entries.map(e => `<div class="hostage-target" style="cursor:default">${e.player} is ${e.character}</div>`).join("")
+    : `<div class="empty">No one else is currently linked.</div>`;
+  showOverlay("telepathic-team-reveal-overlay");
+});
+
+function closeTelepathicTeamReveal() {
+  hideOverlay("telepathic-team-reveal-overlay");
+}
+
+// ---- The Flash's Fastest Man Alive - seat swap ----
+socket.on("speedster_swap_prompt", (data) => {
+  const list = document.getElementById("speedster-swap-candidate-list");
+  const candidates = data.candidates || [];
+  list.innerHTML = candidates.length
+    ? candidates.map(name => `<div class="hostage-target" data-name="${name}">${name}</div>`).join("")
+    : `<div class="empty">No one else is active right now.</div>`;
+  list.querySelectorAll(".hostage-target").forEach(el => {
+    el.addEventListener("click", () => {
+      socket.emit("submit_speedster_swap_target", { flash: myName, target_name: el.dataset.name });
+      hideOverlay("speedster-swap-prompt-overlay");
+    });
+  });
+  showOverlay("speedster-swap-prompt-overlay");
+});
+
+// Public - every player sees this, by design. It's a visible tell.
+socket.on("seat_swap_announcement", (data) => {
+  document.getElementById("seat-swap-announcement-text").textContent =
+    `${data.player_a} swapped seats with ${data.player_b}!`;
+  showOverlay("seat-swap-announcement-overlay");
+});
+
+function closeSeatSwapAnnouncement() {
+  hideOverlay("seat-swap-announcement-overlay");
+}
+
+// ---- Plastic Man's Group Hug - silent left/right shield ----
+socket.on("plastic_man_prompt", () => {
+  showOverlay("plastic-man-prompt-overlay");
+});
+
+function submitPlasticManChoice(direction) {
+  socket.emit("submit_plastic_man_choice", { plastic_man: myName, direction });
+  hideOverlay("plastic-man-prompt-overlay");
 }
 
 // ---- Secret Identity roster view (Plastic Man's Petty Thief, Zatanna's
@@ -622,7 +703,45 @@ socket.on("state", (state) => {
   }
 
   renderActiveList(state);
+  renderPlayerSeatingDiagram(state);
 });
+
+function renderPlayerSeatingDiagram(state) {
+  const panel = document.getElementById("seating-panel");
+  const el = document.getElementById("player-seating-diagram");
+  const seats = state.seats || [];
+  if (!seats.length) {
+    panel.style.display = "none";
+    return;
+  }
+  panel.style.display = "block";
+  const size = 240, cx = size / 2, cy = size / 2, radius = 85, seatR = 20;
+  const n = seats.length;
+  const myLower = (myName || "").trim().toLowerCase();
+  const seatEls = seats.map((name, i) => {
+    const angle = (2 * Math.PI * i) / n - Math.PI / 2;
+    const x = cx + radius * Math.cos(angle);
+    const y = cy + radius * Math.sin(angle);
+    const isMe = name.trim().toLowerCase() === myLower;
+    const fill = isMe ? "#f5b942" : "#1b2330";
+    const textColor = isMe ? "#1a1305" : "#e8edf2";
+    return `
+      <circle cx="${x}" cy="${y}" r="${seatR}" fill="${fill}" stroke="#f5b942" stroke-width="2"/>
+      <text x="${x}" y="${y + 5}" text-anchor="middle" font-family="Rajdhani, sans-serif"
+            font-weight="700" font-size="13" fill="${textColor}">${(name || "").trim().slice(0, 2).toUpperCase()}</text>
+    `;
+  }).join("");
+  el.innerHTML = `
+    <svg viewBox="0 0 ${size} ${size + 36}" style="width:100%; max-width:240px; display:block; margin:0 auto;">
+      <circle cx="${cx}" cy="${cy}" r="${radius + seatR + 6}" fill="none" stroke="#2a3341" stroke-width="1" stroke-dasharray="3,4"/>
+      ${seatEls}
+      <circle cx="${cx}" cy="${cy - radius - seatR - 20}" r="14" fill="#3b7fe0" stroke="#05070a" stroke-width="2"/>
+      <text x="${cx}" y="${cy - radius - seatR - 16}" text-anchor="middle" font-family="Rajdhani, sans-serif"
+            font-weight="800" font-size="9" fill="#fff">WT</text>
+    </svg>
+    <div style="text-align:center; color:var(--muted); font-size:11px">Your seat is highlighted</div>
+  `;
+}
 
 function renderVoteList(state) {
   const list = document.getElementById("vote-list");

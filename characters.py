@@ -35,8 +35,8 @@ MAX_HEALTH = 4
 # wired to one shared global counter - fixed here so each is separate).
 # Starting charge count matches the original's protxn_show = 1.
 SHIELD_CHARACTERS = {
-    "superman", "the_flash", "green_lantern", "captain_marvel", "zatanna",
-    "plastic_man", "booster_gold", "krypto", "streaky", "supergirl",
+    "superman", "captain_marvel", "zatanna",
+    "booster_gold", "krypto", "streaky", "supergirl",
     "superboy", "wonder_girl", "miss_martian", "freddie_freeman",
     "kendra_saunders", "mary_batson",
 }

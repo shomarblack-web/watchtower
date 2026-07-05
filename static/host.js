@@ -113,11 +113,57 @@ socket.on("character_limit_error", (data) => {
   setTimeout(() => { el.style.display = "none"; }, 6000);
 });
 
+socket.on("seat_swap_announcement", (data) => {
+  const el = document.getElementById("host-toast");
+  el.textContent = `${data.player_a} swapped seats with ${data.player_b}! (Fastest Man Alive)`;
+  el.style.display = "block";
+  setTimeout(() => { el.style.display = "none"; }, 6000);
+});
+
 socket.on("game_over", (data) => {
   document.getElementById("gameover-banner-title").textContent = data.title;
   document.getElementById("gameover-banner-message").textContent = data.message;
   document.getElementById("gameover-banner").style.display = "flex";
 });
+
+function seatInitials(name) {
+  return (name || "").trim().slice(0, 2).toUpperCase() || "??";
+}
+
+function renderSeatingDiagram(state) {
+  const el = document.getElementById("seating-diagram");
+  if (!el) return;
+  const seats = state.seats || [];
+  if (!seats.length) {
+    el.innerHTML = `<div class="empty">Seats are assigned when you Shuffle.</div>`;
+    return;
+  }
+  const size = 260, cx = size / 2, cy = size / 2, radius = 95, seatR = 22;
+  const n = seats.length;
+  const glNeighbors = new Set((state.green_lantern_neighbors || []).map(n => n.toLowerCase()));
+  const seatEls = seats.map((name, i) => {
+    const angle = (2 * Math.PI * i) / n - Math.PI / 2;
+    const x = cx + radius * Math.cos(angle);
+    const y = cy + radius * Math.sin(angle);
+    const isGlShielded = glNeighbors.has((name || "").toLowerCase());
+    const stroke = isGlShielded ? "#2dd4ff" : "#f5b942";
+    return `
+      <circle cx="${x}" cy="${y}" r="${seatR}" fill="#1b2330" stroke="${stroke}" stroke-width="${isGlShielded ? 3 : 2}"/>
+      <text x="${x}" y="${y + 5}" text-anchor="middle" font-family="Rajdhani, sans-serif"
+            font-weight="700" font-size="15" fill="#e8edf2">${seatInitials(name)}</text>
+    `;
+  }).join("");
+  el.innerHTML = `
+    <svg viewBox="0 0 ${size} ${size + 40}" style="width:100%; max-width:280px; display:block; margin:0 auto;">
+      <circle cx="${cx}" cy="${cy}" r="${radius + seatR + 6}" fill="none" stroke="#2a3341" stroke-width="1" stroke-dasharray="3,4"/>
+      ${seatEls}
+      <circle cx="${cx}" cy="${cy - radius - seatR - 22}" r="16" fill="#3b7fe0" stroke="#05070a" stroke-width="2"/>
+      <text x="${cx}" y="${cy - radius - seatR - 17}" text-anchor="middle" font-family="Rajdhani, sans-serif"
+            font-weight="800" font-size="10" fill="#fff">WT</text>
+    </svg>
+    <div style="text-align:center; color:var(--muted); font-size:11px; margin-top:2px">Watchtower sits outside the circle</div>
+  `;
+}
 
 function renderPlayersPanel(state) {
   const listEl = document.getElementById("players-list");
@@ -404,6 +450,15 @@ function buildCharRow(c) {
     controls.appendChild(rosterBtn);
   }
 
+  if (c.id === "plastic_man") {
+    const groupHugBtn = document.createElement("button");
+    groupHugBtn.className = "action-btn reveal-btn";
+    groupHugBtn.title = "Let Plastic Man choose Left or Right to silently shield two players";
+    groupHugBtn.textContent = "Send Group Hug Prompt";
+    groupHugBtn.onclick = () => socket.emit("send_plastic_man_prompt", { id: c.id });
+    controls.appendChild(groupHugBtn);
+  }
+
   if (c.id === "beast_boy") {
     const giraffeBtn = document.createElement("button");
     giraffeBtn.className = "action-btn reveal-btn";
@@ -411,6 +466,31 @@ function buildCharRow(c) {
     giraffeBtn.textContent = "Send Giraffe Prompt";
     giraffeBtn.onclick = () => socket.emit("send_giraffe_prompt", { id: c.id });
     controls.appendChild(giraffeBtn);
+  }
+
+  if (c.id === "the_flash") {
+    const swapBtn = document.createElement("button");
+    swapBtn.className = "action-btn reveal-btn";
+    swapBtn.title = "Send a list of active players for The Flash to swap seats with (Protect! phase only)";
+    swapBtn.textContent = "Send Speedster Swap Prompt";
+    swapBtn.onclick = () => socket.emit("send_speedster_swap_prompt", { id: c.id });
+    controls.appendChild(swapBtn);
+  }
+
+  if (["martian_manhunter", "miss_martian"].includes(c.id)) {
+    const linkBtn = document.createElement("button");
+    linkBtn.className = "action-btn reveal-btn";
+    linkBtn.title = "Send a list of active players to Telepathically Link with (Inspect! phase only)";
+    linkBtn.textContent = "Send Telepathic Link Prompt";
+    linkBtn.onclick = () => socket.emit("send_telepathic_link_prompt", { id: c.id });
+    controls.appendChild(linkBtn);
+
+    const teamBtn = document.createElement("button");
+    teamBtn.className = "action-btn reveal-btn";
+    teamBtn.title = "Cross-reveal every Telepathically Linked player to each other (Inspect! phase, Round 3+, needs 2+ links)";
+    teamBtn.textContent = "Activate Telepathic Team";
+    teamBtn.onclick = () => socket.emit("activate_telepathic_team", { id: c.id });
+    controls.appendChild(teamBtn);
   }
 
   if (["martha_kent", "jonathan_kent"].includes(c.id)) {
@@ -500,6 +580,7 @@ socket.on("state", (state) => {
   });
 
   renderPlayersPanel(state);
+  renderSeatingDiagram(state);
   renderHostageBanner(state);
   renderRoundChangeBanners(state);
   renderGoodDoctorBanners(state);
@@ -865,10 +946,26 @@ function openCard(id) {
       ${id === "lobo" ? renderLoboTrackerHtml() : ""}
       ${id === "zoom" ? renderZoomSpeedsterHtml() : ""}
       ${["zod", "faora", "reign"].includes(id) ? renderKryptonianCountHtml(id) : ""}
+      ${["martian_manhunter", "miss_martian"].includes(id) ? renderTelepathicNetworkHtml(id) : ""}
     `;
   }
 
   showOverlay("card-overlay");
+}
+
+function renderTelepathicNetworkHtml(id) {
+  const links = (latestState && latestState.telepathic_links && latestState.telepathic_links[id]) || [];
+  const rows = links.length
+    ? links.map(linkedId => {
+        const name = (latestState.characters[linkedId] || {}).display_name
+          || (CHARACTERS.find(x => x.id === linkedId) || {}).name || linkedId;
+        return `<div class="lobo-tracker-row"><span class="lobo-tracker-label">${name}</span></div>`;
+      }).join("")
+    : `<div class="lobo-tracker-row"><span class="lobo-tracker-label" style="opacity:.6">No one linked yet</span></div>`;
+  return `
+    <div class="card-meta" style="margin-top:14px">Telepathic Network (${links.length} linked)</div>
+    ${rows}
+  `;
 }
 
 function renderZoomSpeedsterHtml() {

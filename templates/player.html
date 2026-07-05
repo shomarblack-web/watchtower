@@ -53,6 +53,11 @@
       <div class="p" id="phase-label">Waiting…</div>
     </div>
 
+    <div class="panel" id="seating-panel" style="display:none">
+      <h3>Seating Chart</h3>
+      <div id="player-seating-diagram"></div>
+    </div>
+
     <div class="panel" id="vote-panel" style="display:none">
       <h3 id="vote-panel-heading">Cast your vote</h3>
       <div class="vote-list" id="vote-list"></div>
@@ -279,6 +284,70 @@
     </div>
   </div>
 </div>
+
+<div id="telepathic-link-prompt-overlay" class="map-overlay">
+  <div class="card-modal kirby-frame">
+    <div class="kirby-inner">
+      <div class="reveal-label">Telepathic Link</div>
+      <p style="color:var(--muted); font-size:13px">
+        Pick a player to wake and privately exchange signals with at the table.
+      </p>
+      <div id="telepathic-link-candidate-list" class="hostage-target-list"></div>
+    </div>
+  </div>
+</div>
+
+<div id="telepathic-team-reveal-overlay" class="map-overlay">
+  <div class="card-modal kirby-frame">
+    <div class="kirby-inner">
+      <div class="reveal-label">Telepathic Team</div>
+      <p style="color:var(--muted); font-size:13px">Your fellow Linked heroes, revealed:</p>
+      <div id="telepathic-team-list" class="hostage-target-list" style="cursor:default"></div>
+      <button class="btn-ghost" style="margin-top:12px" onclick="closeTelepathicTeamReveal()">Got it</button>
+    </div>
+  </div>
+</div>
+
+<div id="speedster-swap-prompt-overlay" class="map-overlay">
+  <div class="card-modal kirby-frame">
+    <div class="kirby-inner">
+      <div class="reveal-label">Fastest Man Alive</div>
+      <p style="color:var(--muted); font-size:13px">
+        Pick a player to swap seats with. Everyone will see this happen.
+      </p>
+      <div id="speedster-swap-candidate-list" class="hostage-target-list"></div>
+    </div>
+  </div>
+</div>
+
+<div id="seat-swap-announcement-overlay" class="map-overlay">
+  <div class="reveal-modal kirby-frame">
+    <div class="kirby-inner">
+      <div class="reveal-label">Seats Swapped!</div>
+      <div class="reveal-name" id="seat-swap-announcement-text" style="font-size:20px">—</div>
+      <div class="reveal-buttons">
+        <button class="btn-ghost" onclick="closeSeatSwapAnnouncement()">Got it</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="plastic-man-prompt-overlay" class="map-overlay">
+  <div class="reveal-modal kirby-frame">
+    <div class="kirby-inner">
+      <div class="reveal-label">Group Hug</div>
+      <p style="color:var(--muted); font-size:13px">
+        Choose a direction. The two players there are silently shielded -
+        they won't be told.
+      </p>
+      <div class="reveal-buttons">
+        <button class="btn-primary" onclick="submitPlasticManChoice('left')">Left</button>
+        <button class="btn-primary" onclick="submitPlasticManChoice('right')">Right</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 
 <div id="secret-roster-overlay" class="map-overlay">
   <div class="card-modal kirby-frame">
