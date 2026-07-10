@@ -11,11 +11,11 @@ WARNING: This is a development server. Do not use it in a production deployment.
  * Running on http://127.0.0.1:5000
  * Running on http://192.0.2.2:5000
 Press CTRL+C to quit
-127.0.0.1 - - [10/Jul/2026 02:37:45] "GET /host HTTP/1.1" 200 -
-127.0.0.1 - - [10/Jul/2026 02:37:45] "GET /static/host.js HTTP/1.1" 200 -
-127.0.0.1 - - [10/Jul/2026 02:37:45] "GET /static/socket.io.min.js HTTP/1.1" 200 -
-127.0.0.1 - - [10/Jul/2026 02:37:45] "GET /static/style.css HTTP/1.1" 200 -
-127.0.0.1 - - [10/Jul/2026 02:37:46] "GET /socket.io/?EIO=4&transport=polling&t=Pz9us40 HTTP/1.1" 200 -
-127.0.0.1 - - [10/Jul/2026 02:37:46] "POST /socket.io/?EIO=4&transport=polling&t=Pz9us5J&sid=f6cylIEbfXcQJoETAAAA HTTP/1.1" 200 -
-127.0.0.1 - - [10/Jul/2026 02:37:46] "GET /socket.io/?EIO=4&transport=polling&t=Pz9us5M&sid=f6cylIEbfXcQJoETAAAA HTTP/1.1" 200 -
-127.0.0.1 - - [10/Jul/2026 02:37:48] "GET /socket.io/?EIO=4&transport=websocket&sid=f6cylIEbfXcQJoETAAAA HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2026 03:07:29] "GET /play HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2026 03:07:29] "GET /static/style.css HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2026 03:07:29] "GET /static/socket.io.min.js HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2026 03:07:29] "GET /static/player.js HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2026 03:07:29] "GET /socket.io/?EIO=4&transport=polling&t=Pz9_fRE HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2026 03:07:29] "POST /socket.io/?EIO=4&transport=polling&t=Pz9_fRc&sid=78882GFwhFt1KRacAAAA HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2026 03:07:29] "GET /socket.io/?EIO=4&transport=polling&t=Pz9_fRf&sid=78882GFwhFt1KRacAAAA HTTP/1.1" 200 -
+127.0.0.1 - - [10/Jul/2026 03:07:37] "GET /socket.io/?EIO=4&transport=websocket&sid=78882GFwhFt1KRacAAAA HTTP/1.1" 200 -
