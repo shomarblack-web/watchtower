@@ -305,6 +305,25 @@ def secret_roster_available(cid):
     current_phase = PHASES[GAME["phase_index"]] if GAME["phase_index"] is not None else None
     return ability_text in tagged_phases.get(current_phase, [])
 
+
+def map_view_available(cid):
+    """Whether Vibe can currently trigger his 10s Zone Grid view via
+    Vibe the Multiverse - active, Round 3+, and in the right phase."""
+    if cid != "vibe":
+        return False
+    st = GAME["characters"].get(cid, {})
+    if not st.get("active") or GAME["round"] < 3:
+        return False
+    ability_text = real_super_ability(cid)
+    if not ability_text:
+        return False
+    tagged_phases = ABILITY_PHASE_MAP.get(cid, {})
+    is_phase_tagged = any(ability_text in phase_list for phase_list in tagged_phases.values())
+    if not is_phase_tagged:
+        return True
+    current_phase = PHASES[GAME["phase_index"]] if GAME["phase_index"] is not None else None
+    return ability_text in tagged_phases.get(current_phase, [])
+
 # James Gordon and Maggie Sawyer's "Citizen's Arrest" blocks Discuss/Vote/
 # Accuse specifically. Robin, Batgirl, and Zatanna's abilities are broader -
 # they block every ability the target has. Same underlying "Arrested!"
@@ -1179,6 +1198,8 @@ def player_page():
         num_rounds=NUM_ROUNDS,
         phase_info=PHASE_INFO,
         intro_script=INTRO_SCRIPT,
+        dceu_grid=DCEU_GRID,
+        column_colors=COLUMN_COLORS,
     )
 
 
@@ -2573,6 +2594,24 @@ def on_send_secret_roster(data):
     if sid:
         socketio.emit("secret_roster_view", {"entries": full_character_roster()}, room=sid)
     log_activity(f"{display_name_for(cid)} viewed the Secret Identity roster (10s)")
+    broadcast()
+
+
+@socketio.on("send_map_view")
+def on_send_map_view(data):
+    """Host triggers Vibe's Super Ability, Vibe the Multiverse - Vibe's
+    player immediately sees the Zone Grid for 10 seconds. Pure view,
+    no approval step needed."""
+    cid = data.get("id")
+    if not map_view_available(cid):
+        return
+    pname = (GAME["characters"][cid].get("player_name") or "").strip()
+    sid = _sid_for_player(pname) if pname else None
+    if sid:
+        socketio.emit("map_view", {
+            "grid": DCEU_GRID, "columns": COLUMN_COLORS, "blackout": GAME["map"],
+        }, room=sid)
+    log_activity(f"{display_name_for(cid)} viewed the Zone Grid (10s)")
     broadcast()
 
 

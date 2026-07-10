@@ -42,11 +42,26 @@ body{
     radial-gradient(ellipse at top, #101823 0%, var(--bg) 55%);
 }
 .host-page .brand{
-  background: linear-gradient(90deg, #f5a623, #ef5568 55%, #c084fc);
-  -webkit-background-clip: text; background-clip: text; color: transparent;
-  text-shadow: none;
+  font-family: 'Bangers', 'Rajdhani', sans-serif;
+  font-weight: 400;
+  letter-spacing: .05em;
+  font-size: 24px;
+  background: none;
+  -webkit-background-clip: initial; background-clip: initial; color: #f5a623;
+  -webkit-text-stroke: 1px #05070a;
+  text-shadow: 2px 2px 0 #c084fc, -1px -1px 0 #05070a;
 }
-.host-page .brand span{ -webkit-text-fill-color: var(--amber); color: var(--amber); }
+.host-page .brand span{ -webkit-text-fill-color: var(--amber); color: var(--amber); -webkit-text-stroke: 0; }
+.host-page .brand small{ -webkit-text-stroke: 0; text-shadow: none; }
+.kirby-divider{
+  height: 16px;
+  background-image:
+    url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA5MCA5MCIgd2lkdGg9IjkwIiBoZWlnaHQ9IjkwIj4KPGNpcmNsZSBjeD0iMTEuNSIgY3k9IjEzLjAiIHI9IjYuOSIgZmlsbD0iIzAwMCIvPgo8Y2lyY2xlIGN4PSI2LjQiIGN5PSIyMC43IiByPSI1LjIiIGZpbGw9IiMwMDAiLz4KPGNpcmNsZSBjeD0iNi4yIiBjeT0iMjAuMSIgcj0iMy4yIiBmaWxsPSIjMDAwIi8+CjxjaXJjbGUgY3g9IjY4LjciIGN5PSI2LjQiIHI9IjMuNSIgZmlsbD0iIzAwMCIvPgo8Y2lyY2xlIGN4PSI2OC41IiBjeT0iMjEuNSIgcj0iMy43IiBmaWxsPSIjMDAwIi8+CjxjaXJjbGUgY3g9IjY0LjUiIGN5PSIxNy41IiByPSI4LjciIGZpbGw9IiMwMDAiLz4KPGNpcmNsZSBjeD0iNDEuNSIgY3k9IjYyLjkiIHI9IjguOSIgZmlsbD0iIzAwMCIvPgo8Y2lyY2xlIGN4PSIzMC45IiBjeT0iNzIuMiIgcj0iNC43IiBmaWxsPSIjMDAwIi8+CjxjaXJjbGUgY3g9IjMyLjkiIGN5PSI1Ny40IiByPSI0LjkiIGZpbGw9IiMwMDAiLz4KPGNpcmNsZSBjeD0iNDYuMyIgY3k9IjU4LjYiIHI9IjYuNSIgZmlsbD0iIzAwMCIvPgo8Y2lyY2xlIGN4PSIxMi44IiBjeT0iNzIuNCIgcj0iNi4zIiBmaWxsPSIjMDAwIi8+CjxjaXJjbGUgY3g9IjEuMyIgY3k9IjY2LjIiIHI9IjQuMiIgZmlsbD0iIzAwMCIvPgo8Y2lyY2xlIGN4PSI4My42IiBjeT0iNzMuNiIgcj0iNC45IiBmaWxsPSIjMDAwIi8+CjxjaXJjbGUgY3g9IjgxLjciIGN5PSI3NC4xIiByPSI0LjgiIGZpbGw9IiMwMDAiLz4KPGNpcmNsZSBjeD0iNzEuNSIgY3k9IjYyLjkiIHI9IjIuMSIgZmlsbD0iIzAwMCIvPgo8Y2lyY2xlIGN4PSI1MS43IiBjeT0iNDcuMyIgcj0iMy43IiBmaWxsPSIjMDAwIi8+CjxjaXJjbGUgY3g9IjY1LjciIGN5PSIyNS45IiByPSI0LjAiIGZpbGw9IiMwMDAiLz4KPGNpcmNsZSBjeD0iMTAuNiIgY3k9IjM3LjYiIHI9IjMuNCIgZmlsbD0iIzAwMCIvPgo8Y2lyY2xlIGN4PSIxMy43IiBjeT0iNDQuMCIgcj0iMS42IiBmaWxsPSIjMDAwIi8+CjxjaXJjbGUgY3g9IjYwLjEiIGN5PSI2OC44IiByPSIyLjkiIGZpbGw9IiMwMDAiLz4KPGNpcmNsZSBjeD0iNzguOCIgY3k9IjI4LjIiIHI9IjMuMiIgZmlsbD0iIzAwMCIvPgo8Y2lyY2xlIGN4PSI1My41IiBjeT0iNTIuMiIgcj0iMi42IiBmaWxsPSIjMDAwIi8+CjxjaXJjbGUgY3g9Ijc1LjYiIGN5PSI4NS4wIiByPSIyLjciIGZpbGw9IiMwMDAiLz4KPGNpcmNsZSBjeD0iNTkuOCIgY3k9IjUuNSIgcj0iMy4zIiBmaWxsPSIjMDAwIi8+Cjwvc3ZnPg=="),
+    linear-gradient(90deg, #4b1fa8 0%, #b8228c 55%, #ff7b1c 100%);
+  background-repeat: repeat, no-repeat;
+  background-size: 60px 60px, 100% 100%;
+  box-shadow: 0 0 0 2px rgba(0,0,0,.6), 0 4px 14px rgba(0,0,0,.4);
+}
 .host-page .panel h3{ position: relative; padding-bottom: 8px; }
 .host-page .panel h3::after{
   content: ""; position: absolute; left: 0; bottom: 0; height: 2px; width: 46px;
@@ -478,11 +493,12 @@ body{
 .map-row{ display:flex; gap:3px; }
 .map-corner{ width:54px; height:34px; }
 .map-colhead, .map-rowhead{
-  width:54px; height:34px; display:flex; align-items:center; justify-content:center;
+  display:flex; align-items:center; justify-content:center;
   font-family:'Rajdhani',sans-serif; font-weight:700; font-size:13px; border-radius:4px;
   color:#0a0e14;
 }
-.map-rowhead{ background: var(--panel-raised); color: var(--muted); }
+.map-colhead{ width:88px; height:34px; }
+.map-rowhead{ width:54px; height:54px; background: var(--panel-raised); color: var(--muted); }
 .map-cell{
   width: 88px; height: 54px; border-radius:5px; background: var(--panel-raised);
   border:1px solid var(--line); color: var(--text); font-size: 10px; text-align:center;
@@ -876,14 +892,22 @@ body{
   opacity: .8;
 }
 
-.crawl-skip{
+.crawl-buttons{
   position: absolute; top: 20px; right: 20px; z-index: 2;
+  display: flex; flex-direction: column; gap: 8px; align-items: flex-end;
+}
+.crawl-skip{
   background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.25);
   color: #cfd6dd; padding: 8px 16px; border-radius: 6px;
   font-family: 'Rajdhani', sans-serif; font-size: 13px; letter-spacing: .05em;
   cursor: pointer;
 }
 .crawl-skip:hover{ background: rgba(255,255,255,.16); color: #fff; }
+.crawl-never{
+  background: transparent; border-color: rgba(255,255,255,.15);
+  color: #8b939b; font-size: 12px; padding: 6px 14px;
+}
+.crawl-never:hover{ background: rgba(255,255,255,.08); color: #cfd6dd; }
 
 .crawl-fade-top{
   position: absolute; top: 0; left: 0; right: 0; height: 35%;

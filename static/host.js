@@ -450,6 +450,15 @@ function buildCharRow(c) {
     controls.appendChild(rosterBtn);
   }
 
+  if (c.id === "vibe") {
+    const mapBtn = document.createElement("button");
+    mapBtn.className = "action-btn reveal-btn";
+    mapBtn.title = "Show this player the Zone Grid for 10 seconds (Inspect! phase, Round 3+)";
+    mapBtn.textContent = "Show Zone Grid (10s)";
+    mapBtn.onclick = () => socket.emit("send_map_view", { id: c.id });
+    controls.appendChild(mapBtn);
+  }
+
   if (c.id === "plastic_man") {
     const groupHugBtn = document.createElement("button");
     groupHugBtn.className = "action-btn reveal-btn";

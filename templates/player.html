@@ -10,7 +10,10 @@
 
 <div id="intro-crawl-overlay" class="intro-crawl-overlay">
   <div class="crawl-stars"></div>
-  <button class="crawl-skip" onclick="skipIntroCrawl()">Skip Intro</button>
+  <div class="crawl-buttons">
+    <button class="crawl-skip" onclick="skipIntroCrawl()">Skip Intro</button>
+    <button class="crawl-skip crawl-never" onclick="neverShowIntroCrawl()">Never Show Again</button>
+  </div>
   <div class="crawl-fade-top"></div>
   <div class="crawl-viewport">
     <div class="crawl-text" id="crawl-text">
@@ -413,6 +416,17 @@
   </div>
 </div>
 
+<div id="vibe-map-overlay" class="map-overlay">
+  <div class="card-modal kirby-frame">
+    <div class="kirby-inner">
+      <div class="reveal-label">Zone Grid — View Only</div>
+      <div id="vibe-map-countdown" class="secret-roster-countdown">10</div>
+      <div class="secret-roster-bar-track"><div id="vibe-map-bar" class="secret-roster-bar"></div></div>
+      <div id="vibe-map-grid"></div>
+    </div>
+  </div>
+</div>
+
 <div id="inspect-waiting-overlay" class="map-overlay">
   <div class="reveal-modal kirby-frame">
     <div class="kirby-inner">
@@ -480,6 +494,8 @@
   const PHASES = {{ phases | tojson }};
   const PHASE_INFO = {{ phase_info | tojson }};
   const INTRO_SCRIPT = {{ intro_script | tojson }};
+  const DCEU_GRID = {{ dceu_grid | tojson }};
+  const COLUMN_COLORS = {{ column_colors | tojson }};
 </script>
 <script src="/static/player.js"></script>
 </body>

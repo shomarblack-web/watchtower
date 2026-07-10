@@ -422,6 +422,17 @@ PACKS = [
             "martin_stein", "jefferson_jackson", "the_spectre",
         ],
     },
+    {
+        # Confirmed members per your Family/pack planning conversation.
+        # The pack's full content (zone gating, Hacked Teleporter, etc.)
+        # isn't built yet - this just makes these six characters usable
+        # in the meantime instead of permanently locked out.
+        "id": "danger_zones", "label": "Danger Zones", "free": False,
+        "characters": [
+            "vibe", "swamp_thing", "brainiac", "poison_ivy",
+            "harrison_wells", "felicity_smoak",
+        ],
+    },
 ]
 
 PACK_LABELS = {p["id"]: p["label"] for p in PACKS}

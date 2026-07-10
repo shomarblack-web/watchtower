@@ -1,20 +1,21 @@
 const socket = io();
 
-// ---- Intro crawl - shown once per browser, first time /play loads ----
+// ---- Intro crawl - shown every time /play loads, unless the player
+// has explicitly chosen "Never show again" ----
 (function initIntroCrawl() {
   const overlay = document.getElementById("intro-crawl-overlay");
   const crawlText = document.getElementById("crawl-text");
   const bodyEl = document.getElementById("crawl-body");
   if (!overlay) return;
 
-  let alreadySeen = false;
+  let neverShow = false;
   try {
-    alreadySeen = localStorage.getItem("watchtower_intro_seen") === "1";
+    neverShow = localStorage.getItem("watchtower_intro_never_show") === "1";
   } catch (e) {
-    alreadySeen = false;
+    neverShow = false;
   }
 
-  if (alreadySeen) {
+  if (neverShow) {
     overlay.classList.add("crawl-hidden");
     return;
   }
@@ -26,15 +27,18 @@ const socket = io();
     .map(para => `<span class="crawl-para">${para}</span><br><br>`)
     .join("");
 
-  const finish = () => {
+  const dismiss = () => {
     overlay.classList.add("crawl-hidden");
-    try {
-      localStorage.setItem("watchtower_intro_seen", "1");
-    } catch (e) { /* ignore - private browsing etc, just won't persist */ }
   };
 
-  crawlText.addEventListener("animationend", finish);
-  window.skipIntroCrawl = finish;
+  crawlText.addEventListener("animationend", dismiss);
+  window.skipIntroCrawl = dismiss;
+  window.neverShowIntroCrawl = () => {
+    try {
+      localStorage.setItem("watchtower_intro_never_show", "1");
+    } catch (e) { /* ignore - private browsing etc, just won't persist */ }
+    dismiss();
+  };
 })();
 
 // ---- animated overlay show/hide (fade + scale, see .map-overlay CSS) ----
@@ -517,6 +521,74 @@ socket.on("secret_roster_view", (data) => {
       clearInterval(secretRosterTimer);
       secretRosterTimer = null;
       hideOverlay("secret-roster-overlay");
+    }
+  }, 1000);
+});
+
+// ---- Vibe the Multiverse - view-only Zone Grid, auto-dismisses after
+// 10 seconds, same pattern as the Secret Identity roster view ----
+let vibeMapTimer = null;
+socket.on("map_view", (data) => {
+  const gridEl = document.getElementById("vibe-map-grid");
+  const grid = data.grid || [];
+  const columns = data.columns || [];
+  const blackout = data.blackout || {};
+
+  const table = document.createElement("div");
+  table.className = "map-table";
+
+  const headRow = document.createElement("div");
+  headRow.className = "map-row";
+  const corner = document.createElement("div");
+  corner.className = "map-corner";
+  headRow.appendChild(corner);
+  columns.forEach(([letter, hex]) => {
+    const el = document.createElement("div");
+    el.className = "map-colhead";
+    el.textContent = letter;
+    el.style.background = hex;
+    headRow.appendChild(el);
+  });
+  table.appendChild(headRow);
+
+  grid.forEach((row, rIdx) => {
+    const rowEl = document.createElement("div");
+    rowEl.className = "map-row";
+    const rowHead = document.createElement("div");
+    rowHead.className = "map-rowhead";
+    rowHead.textContent = String(rIdx);
+    rowEl.appendChild(rowHead);
+    row.forEach(locName => {
+      const cell = document.createElement("div");
+      cell.className = "map-cell";
+      if (blackout[locName]) cell.classList.add("blackout");
+      cell.textContent = locName;
+      rowEl.appendChild(cell);
+    });
+    table.appendChild(rowEl);
+  });
+
+  gridEl.innerHTML = "";
+  gridEl.appendChild(table);
+  showOverlay("vibe-map-overlay");
+
+  let remaining = 10;
+  const countdownEl = document.getElementById("vibe-map-countdown");
+  const barEl = document.getElementById("vibe-map-bar");
+  countdownEl.textContent = remaining;
+  barEl.style.transition = "none";
+  barEl.style.width = "100%";
+  void barEl.offsetWidth;
+  barEl.style.transition = "width 1s linear";
+  if (vibeMapTimer) clearInterval(vibeMapTimer);
+  vibeMapTimer = setInterval(() => {
+    remaining -= 1;
+    countdownEl.textContent = Math.max(remaining, 0);
+    barEl.style.width = `${Math.max(remaining, 0) * 10}%`;
+    if (remaining <= 0) {
+      clearInterval(vibeMapTimer);
+      vibeMapTimer = null;
+      hideOverlay("vibe-map-overlay");
     }
   }, 1000);
 });
