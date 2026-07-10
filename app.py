@@ -1178,6 +1178,7 @@ def player_page():
         phases=PHASES,
         num_rounds=NUM_ROUNDS,
         phase_info=PHASE_INFO,
+        intro_script=INTRO_SCRIPT,
     )
 
 

@@ -1293,13 +1293,7 @@ function beep() {
 // ---- moderator narration prompts ----
 function openPrompts() {
   const body = document.getElementById("prompts-body");
-  const introHtml = `
-    <div class="ability-row">
-      <div class="ability-title">Intro Script</div>
-      <div class="ability-desc intro-text">${INTRO_SCRIPT}</div>
-    </div>
-  `;
-  body.innerHTML = introHtml + PROMPTS.map(p => `
+  body.innerHTML = PROMPTS.map(p => `
     <div class="ability-row ${p.deprecated ? "prompt-deprecated" : ""}">
       <div class="ability-title">${p.title}${p.deprecated ? ' <span class="prompt-tag">no longer used</span>' : ""}</div>
       <div class="ability-desc prompt-quote">&ldquo;${p.text}&rdquo;</div>
@@ -1309,6 +1303,19 @@ function openPrompts() {
 }
 function closePrompts() {
   hideOverlay("prompts-overlay");
+}
+
+// ---- intro script (moved out of Prompts into its own button) ----
+function openIntro() {
+  document.getElementById("intro-script-body").innerHTML = `
+    <div class="ability-row">
+      <div class="ability-desc intro-text">${INTRO_SCRIPT}</div>
+    </div>
+  `;
+  showOverlay("intro-script-modal-overlay");
+}
+function closeIntro() {
+  hideOverlay("intro-script-modal-overlay");
 }
 
 // ---- Cardopedia - host-facing searchable reference, plain text only

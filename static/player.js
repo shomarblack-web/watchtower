@@ -1,5 +1,42 @@
 const socket = io();
 
+// ---- Intro crawl - shown once per browser, first time /play loads ----
+(function initIntroCrawl() {
+  const overlay = document.getElementById("intro-crawl-overlay");
+  const crawlText = document.getElementById("crawl-text");
+  const bodyEl = document.getElementById("crawl-body");
+  if (!overlay) return;
+
+  let alreadySeen = false;
+  try {
+    alreadySeen = localStorage.getItem("watchtower_intro_seen") === "1";
+  } catch (e) {
+    alreadySeen = false;
+  }
+
+  if (alreadySeen) {
+    overlay.classList.add("crawl-hidden");
+    return;
+  }
+
+  bodyEl.innerHTML = (INTRO_SCRIPT || "")
+    .split("\n\n")
+    .map(para => para.trim())
+    .filter(Boolean)
+    .map(para => `<span class="crawl-para">${para}</span><br><br>`)
+    .join("");
+
+  const finish = () => {
+    overlay.classList.add("crawl-hidden");
+    try {
+      localStorage.setItem("watchtower_intro_seen", "1");
+    } catch (e) { /* ignore - private browsing etc, just won't persist */ }
+  };
+
+  crawlText.addEventListener("animationend", finish);
+  window.skipIntroCrawl = finish;
+})();
+
 // ---- animated overlay show/hide (fade + scale, see .map-overlay CSS) ----
 function showOverlay(id) {
   document.getElementById(id).classList.add("overlay-open");

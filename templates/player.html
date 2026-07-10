@@ -8,6 +8,20 @@
 </head>
 <body class="player-page">
 
+<div id="intro-crawl-overlay" class="intro-crawl-overlay">
+  <div class="crawl-stars"></div>
+  <button class="crawl-skip" onclick="skipIntroCrawl()">Skip Intro</button>
+  <div class="crawl-fade-top"></div>
+  <div class="crawl-viewport">
+    <div class="crawl-text" id="crawl-text">
+      <div class="crawl-title">WHITE MARTIAN</div>
+      <div class="crawl-subtitle">Episode I</div>
+      <div class="crawl-subtitle crawl-subtitle-small">The Watchtower Protocol</div>
+      <p id="crawl-body"></p>
+    </div>
+  </div>
+</div>
+
 <div class="topbar">
   <div class="brand">WHITE MARTIAN <span>&reg;</span><small>WATCHTOWER</small></div>
   <div class="player-toolbar" id="player-toolbar" style="display:none">
@@ -465,6 +479,7 @@
   const TEAM_COLORS = {{ team_colors | tojson }};
   const PHASES = {{ phases | tojson }};
   const PHASE_INFO = {{ phase_info | tojson }};
+  const INTRO_SCRIPT = {{ intro_script | tojson }};
 </script>
 <script src="/static/player.js"></script>
 </body>
