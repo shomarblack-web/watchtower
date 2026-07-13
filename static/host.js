@@ -130,6 +130,40 @@ function seatInitials(name) {
   return (name || "").trim().slice(0, 2).toUpperCase() || "??";
 }
 
+function renderDifficultyPresets(state) {
+  const panel = document.getElementById("difficulty-panel");
+  const container = document.getElementById("difficulty-presets");
+  const presets = state.difficulty_presets || [];
+  if (!presets.length) {
+    panel.style.display = "none";
+    return;
+  }
+  panel.style.display = "block";
+
+  const shortLabel = { martian: "WM", hero: "Hero", civilian: "Civ", villain: "Vil", sidekick: "SK" };
+  container.innerHTML = presets.map((p, i) => {
+    const parts = Object.entries(p.teams)
+      .filter(([, count]) => count > 0)
+      .map(([team, count]) => `${count} ${shortLabel[team] || team}`)
+      .join(" · ");
+    const extrapolatedTag = p.extrapolated
+      ? '<span class="prompt-tag" title="No exact preset for this player count - scaled from the nearest one">best guess</span>' : "";
+    return `
+      <button class="btn-ghost difficulty-preset-btn" data-index="${i}" style="width:100%; text-align:left; margin-bottom:6px; padding:10px 14px;">
+        <strong>${p.name}</strong> ${extrapolatedTag}<br>
+        <span style="color:var(--muted); font-size:12px">${parts}</span>
+      </button>
+    `;
+  }).join("");
+
+  container.querySelectorAll(".difficulty-preset-btn").forEach(btn => {
+    btn.onclick = () => {
+      const p = presets[parseInt(btn.dataset.index, 10)];
+      socket.emit("apply_difficulty_preset", { name: p.name, player_count: p.player_count, teams: p.teams });
+    };
+  });
+}
+
 function renderSeatingDiagram(state) {
   const el = document.getElementById("seating-diagram");
   if (!el) return;
@@ -619,6 +653,7 @@ socket.on("state", (state) => {
 
   renderPlayersPanel(state);
   renderSeatingDiagram(state);
+  renderDifficultyPresets(state);
   renderHostageBanner(state);
   renderRoundChangeBanners(state);
   renderGoodDoctorBanners(state);

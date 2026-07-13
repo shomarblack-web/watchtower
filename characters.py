@@ -435,6 +435,138 @@ PACKS = [
     },
 ]
 
+# Difficulty presets - exact team-composition ratios per the marketing
+# doc, offered as one-click suggestions (never enforced). "packs_required"
+# gates which presets can even appear; [] means Basic-only (always
+# available). Where the source doc gives two options the same name (the
+# two "World's Finest" and two "System's Finest" variants), the UI tells
+# them apart by showing their composition directly rather than inventing
+# extra names.
+DIFFICULTY_PRESETS = [
+    {"name": "Brave", "player_count": 5, "packs_required": [],
+     "teams": {"martian": 1, "hero": 2, "civilian": 2, "villain": 0, "sidekick": 0}},
+    {"name": "Braver", "player_count": 5, "packs_required": [],
+     "teams": {"martian": 2, "hero": 1, "civilian": 2, "villain": 0, "sidekick": 0}},
+
+    {"name": "Brave", "player_count": 7, "packs_required": [],
+     "teams": {"martian": 2, "hero": 2, "civilian": 3, "villain": 0, "sidekick": 0}},
+    {"name": "Braver", "player_count": 7, "packs_required": [],
+     "teams": {"martian": 1, "hero": 2, "civilian": 3, "villain": 1, "sidekick": 0}},
+
+    {"name": "Bold", "player_count": 10, "packs_required": ["hostage_situation", "young_justice"],
+     "teams": {"martian": 1, "hero": 2, "civilian": 3, "villain": 2, "sidekick": 2}},
+    {"name": "Bolder", "player_count": 10, "packs_required": ["hostage_situation", "young_justice"],
+     "teams": {"martian": 2, "hero": 3, "civilian": 3, "villain": 2, "sidekick": 0}},
+
+    {"name": "Bold", "player_count": 12, "packs_required": ["hostage_situation", "young_justice"],
+     "teams": {"martian": 2, "hero": 2, "civilian": 4, "villain": 2, "sidekick": 2}},
+    {"name": "Bolder", "player_count": 12, "packs_required": ["hostage_situation", "young_justice"],
+     "teams": {"martian": 1, "hero": 2, "civilian": 6, "villain": 2, "sidekick": 1}},
+
+    {"name": "World's Finest", "player_count": 10,
+     "packs_required": ["interstellar_threats", "power_struggle", "agents_of_chaos", "civil_disobedience"],
+     "teams": {"martian": 1, "hero": 1, "civilian": 5, "villain": 3, "sidekick": 0}},
+    {"name": "World's Finest", "player_count": 10,
+     "packs_required": ["interstellar_threats", "power_struggle", "agents_of_chaos", "civil_disobedience"],
+     "teams": {"martian": 2, "hero": 2, "civilian": 4, "villain": 2, "sidekick": 0}},
+
+    {"name": "System's Finest", "player_count": 12,
+     "packs_required": ["interstellar_threats", "power_struggle", "agents_of_chaos", "civil_disobedience"],
+     "teams": {"martian": 1, "hero": 1, "civilian": 6, "villain": 4, "sidekick": 0}},
+    {"name": "System's Finest", "player_count": 12,
+     "packs_required": ["interstellar_threats", "power_struggle", "agents_of_chaos", "civil_disobedience"],
+     "teams": {"martian": 1, "hero": 2, "civilian": 4, "villain": 4, "sidekick": 1}},
+]
+
+# Crisis difficulty (Danger Zones) has no Hero slot at all - instead a
+# Civilian who can become a Hero mid-game fills that role, per your
+# clarification. Only the four Civilians who reveal AS a Hero count for
+# this (not Harvey Dent/Harleen Quinzel/Caitlin Snow/Reign, who reveal
+# as Villains). Crisis reuses World's Finest/System's Finest numbers
+# exactly, just with the Hero slot's count folded into Civilian instead,
+# with one of those Civilian picks guaranteed to be a Switch-Civilian.
+SWITCH_HERO_CIVILIAN_IDS = ["mary_batson", "freddie_freeman", "martin_stein", "jefferson_jackson"]
+
+
+def _make_crisis_presets():
+    crisis = []
+    for p in DIFFICULTY_PRESETS:
+        if p["name"] not in ("World's Finest", "System's Finest"):
+            continue
+        teams = dict(p["teams"])
+        hero_count = teams.pop("hero", 0)
+        teams["hero"] = 0
+        teams["civilian"] = teams.get("civilian", 0) + hero_count
+        crisis.append({
+            "name": "Crisis", "player_count": p["player_count"],
+            "packs_required": ["danger_zones"],
+            "teams": teams,
+            "switch_civilian_required": min(hero_count, len(SWITCH_HERO_CIVILIAN_IDS)),
+        })
+    return crisis
+
+
+DIFFICULTY_PRESETS = DIFFICULTY_PRESETS + _make_crisis_presets()
+
+# Families - confirmed during planning as the core grouping used to
+# auto-populate difficulty presets (Hero first, then pool the chosen
+# Heroes' own Civilians/Villains/Sidekicks together). This is core data,
+# always active - unlike the rescue-destination/city tags, which are
+# separate, Danger-Zones-only fields not encoded here.
+#
+# Everyone NOT listed here is unaffiliated (the "general pool") - mainly
+# Villains and a few Sidekicks (Beast Boy, Bumblebee, Miss Martian) per
+# your confirmation. Several Heroes and a handful of Civilians are also
+# still untagged pending more work later (Green Lantern, Martian
+# Manhunter, Vibe, Swamp Thing, Zatanna, Shazam, Booster Gold, The
+# Spectre, Plastic Man; Felicity Smoak, Kendra Saunders, Freddie Freeman,
+# Mary Batson, Samantha Arias) - they simply won't be pulled into any
+# Family-based pool.
+FAMILIES = {
+    "bat_family": {
+        "hero": "batman",
+        "civilians": ["a_pennyworth", "harvey_dent", "james_gordon", "leslie_thompkins"],
+        "villains": ["bat-mite", "joker", "poison_ivy", "ras_al-ghul", "riddler"],
+        "sidekicks": ["batgirl", "robin"],
+    },
+    "superman_family": {
+        "hero": "superman",
+        "civilians": ["cat_grant", "jimmy_olsen", "lana_lang", "lois_lane", "martha_kent",
+                      "maggie_sawyer", "jonathan_kent", "perry_white", "pete_ross"],
+        "villains": ["brainiac", "darkseid", "faora", "doomsday", "lena_luthor", "lex_luthor",
+                     "maxima", "mercy", "miss_tessmacher", "mr_mxyzptlk", "otis", "parasite", "zod"],
+        "sidekicks": ["krypto", "streaky", "superboy", "supergirl"],
+    },
+    "flash_family": {
+        "hero": "the_flash",
+        "hero_extra": ["vibe"],
+        "civilians": ["dr_caitlin_snow", "dr_harleen_quinzel", "harrison_wells", "iris_west",
+                      "jefferson_jackson", "joe_west", "martin_stein"],
+        "villains": ["dr_alchemy", "grodd", "reverse_flash", "zoom"],
+        "sidekicks": ["jesse_quick", "kid_flash"],
+    },
+    "wonder_family": {
+        "hero": "wonder_woman",
+        "civilians": ["steve_trevor"],
+        "villains": ["ares", "cheetah"],
+        "sidekicks": ["wonder_girl"],
+    },
+    "black_lightning_family": {
+        "hero": "black_lightning",
+        "civilians": [],
+        "villains": ["tobias_whale"],
+        "sidekicks": ["thunder"],
+    },
+}
+
+# Reverse lookup: hero character id -> family key (built from the above,
+# including the "hero_extra" co-heroes like Vibe sharing Flash-Family).
+HERO_TO_FAMILY = {}
+for _fam_key, _fam in FAMILIES.items():
+    HERO_TO_FAMILY[_fam["hero"]] = _fam_key
+    for _extra_hero in _fam.get("hero_extra", []):
+        HERO_TO_FAMILY[_extra_hero] = _fam_key
+
 PACK_LABELS = {p["id"]: p["label"] for p in PACKS}
 
 # Assign each character its pack id (None = not in any pack yet, so it

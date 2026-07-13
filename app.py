@@ -34,6 +34,7 @@ from characters import (
     MAX_HEALTH, SHIELD_START, COLUMN_COLORS, DCEU_GRID, DCEU_LOCATIONS, PHASE_INFO,
     NARRATION_PROMPTS, INTRO_SCRIPT, PACKS, PACK_LABELS, SWITCH_CHARACTERS,
     HOSTAGE_ABILITIES, KRYPTONIAN_IDS, KNOWS_IDENTITY_OF,
+    DIFFICULTY_PRESETS, FAMILIES, HERO_TO_FAMILY, SWITCH_HERO_CIVILIAN_IDS,
 )
 
 CARDS = json.loads((Path(__file__).parent / "cards.json").read_text())
@@ -874,6 +875,7 @@ def public_state(reveal_names):
         state["good_doctor_requests"] = GAME["good_doctor_requests"]
         state["active_telepathy_cid"] = GAME["active_telepathy_cid"]
         state["telepathic_links"] = GAME["telepathic_links"]
+        state["difficulty_presets"] = available_difficulty_presets()
     return state
 
 
@@ -1941,6 +1943,170 @@ def on_toggle_player_eliminated(data):
     broadcast()
 
 
+WHITE_MARTIAN_IDS = ["white_martian_i", "white_martian_ii"]
+
+
+def _preset_pack_ids():
+    """Every distinct pack combination referenced across DIFFICULTY_PRESETS,
+    used to group presets into tiers for extrapolation."""
+    seen = []
+    for p in DIFFICULTY_PRESETS:
+        key = tuple(sorted(p["packs_required"]))
+        if key not in seen:
+            seen.append(key)
+    return seen
+
+
+def _extrapolate_preset(tier_presets, player_count):
+    """Best-guess scaled version of a tier's ratios for a player count
+    that doesn't exactly match one of its documented anchors - uses
+    whichever anchor in the tier is numerically closest, scales every
+    team's share of the total proportionally, and fixes up any rounding
+    error in the Civilian count (the most flexible/populous team) so the
+    total always lands exactly on player_count."""
+    nearest = min(tier_presets, key=lambda p: abs(p["player_count"] - player_count))
+    anchor_total = sum(nearest["teams"].values())
+    if anchor_total == 0:
+        return None
+    scaled = {
+        team: round(count / anchor_total * player_count)
+        for team, count in nearest["teams"].items()
+    }
+    diff = player_count - sum(scaled.values())
+    scaled["civilian"] = max(0, scaled.get("civilian", 0) + diff)
+    result = {
+        "name": nearest["name"], "player_count": player_count,
+        "packs_required": nearest["packs_required"], "teams": scaled,
+        "extrapolated": True,
+    }
+    if "switch_civilian_required" in nearest:
+        result["switch_civilian_required"] = min(
+            nearest["switch_civilian_required"], scaled.get("civilian", 0)
+        )
+    return result
+
+
+def available_difficulty_presets():
+    """Presets to show the host right now: exact matches for the current
+    player count with their packs unlocked, plus one best-guess
+    extrapolated preset per unlocked tier when the count doesn't exactly
+    match that tier's documented anchors. Tiers with no exact match AND
+    no documented anchors at all (Crisis) never produce a suggestion."""
+    player_count = len(GAME["players"])
+    if player_count == 0:
+        return []
+    unlocked = set(GAME["unlocked_packs"])
+
+    exact = [
+        {**p, "extrapolated": False} for p in DIFFICULTY_PRESETS
+        if p["player_count"] == player_count and set(p["packs_required"]) <= unlocked
+    ]
+    if exact:
+        return exact
+
+    results = []
+    for pack_key in _preset_pack_ids():
+        if not set(pack_key) <= unlocked:
+            continue
+        tier_presets = [p for p in DIFFICULTY_PRESETS if tuple(sorted(p["packs_required"])) == pack_key]
+        extrapolated = _extrapolate_preset(tier_presets, player_count)
+        if extrapolated:
+            results.append(extrapolated)
+    return results
+
+
+def _pool_for_family_role(chosen_hero_ids, role, exclude_ids):
+    """Every character in `role` ('civilians'/'villains'/'sidekicks')
+    affiliated with any of the chosen heroes' Families, excluding
+    anyone already picked. Falls back to every OTHER family's pool for
+    that role, then to the unaffiliated general pool, in that order -
+    each as a separate tier so callers can prefer closer matches first."""
+    primary, other_families, unaffiliated = [], [], []
+    chosen_family_keys = {HERO_TO_FAMILY[h] for h in chosen_hero_ids if h in HERO_TO_FAMILY}
+    for fam_key, fam in FAMILIES.items():
+        for cid in fam.get(role, []):
+            if cid in exclude_ids:
+                continue
+            (primary if fam_key in chosen_family_keys else other_families).append(cid)
+    affiliated_ids = {
+        cid for fam in FAMILIES.values() for cid in fam.get(role, [])
+    }
+    team_name = {"civilians": "civilian", "villains": "villain", "sidekicks": "sidekick"}[role]
+    for c in CHARACTERS:
+        if c["team"] == team_name and c["id"] not in affiliated_ids and c["id"] not in exclude_ids:
+            unaffiliated.append(c["id"])
+    return primary, other_families, unaffiliated
+
+
+def _pick_random(count, *pools):
+    """Randomly picks `count` ids across pools in priority order,
+    without repeats, pulling from later pools only once earlier ones
+    are exhausted."""
+    picked = []
+    for pool in pools:
+        if len(picked) >= count:
+            break
+        remaining_needed = count - len(picked)
+        candidates = [cid for cid in pool if cid not in picked]
+        picked.extend(random.sample(candidates, min(remaining_needed, len(candidates))))
+    return picked
+
+
+def apply_difficulty_preset(preset):
+    """Selects which characters are active to match a preset's team
+    ratios - Heroes first (random from whichever are unlocked and
+    untagged-family-eligible... actually any unlocked Hero), then pools
+    the chosen Heroes' own Civilians/Villains/Sidekicks together and
+    picks randomly from that combined pool, falling back to other
+    families' pools and then the unaffiliated pool if there aren't
+    enough. This only changes which characters are active - it does not
+    touch players, seating, or run Shuffle."""
+    teams = preset["teams"]
+
+    for st in GAME["characters"].values():
+        st["active"] = False
+
+    unlocked_ids = {c["id"] for c in CHARACTERS if is_unlocked(c["id"])}
+
+    martian_ids = _pick_random(min(teams.get("martian", 0), len(WHITE_MARTIAN_IDS)), WHITE_MARTIAN_IDS)
+
+    hero_pool = [c["id"] for c in CHARACTERS if c["team"] == "hero" and c["id"] in unlocked_ids]
+    hero_ids = _pick_random(teams.get("hero", 0), hero_pool)
+
+    picked = set(martian_ids) | set(hero_ids)
+
+    switch_civ_want = min(preset.get("switch_civilian_required", 0), teams.get("civilian", 0))
+    if switch_civ_want:
+        switch_pool = [cid for cid in SWITCH_HERO_CIVILIAN_IDS if cid in unlocked_ids]
+        picked.update(_pick_random(switch_civ_want, switch_pool))
+
+    for role, team_key in (("civilians", "civilian"), ("villains", "villain"), ("sidekicks", "sidekick")):
+        want = teams.get(team_key, 0)
+        if team_key == "civilian":
+            already_picked_civilians = sum(
+                1 for cid in picked if CHARACTERS_BY_ID.get(cid, {}).get("team") == "civilian"
+            )
+            want -= already_picked_civilians
+        if want <= 0:
+            continue
+        primary, other, unaffiliated = _pool_for_family_role(hero_ids, role, picked)
+        primary = [cid for cid in primary if cid in unlocked_ids]
+        other = [cid for cid in other if cid in unlocked_ids]
+        unaffiliated = [cid for cid in unaffiliated if cid in unlocked_ids]
+        newly_picked = _pick_random(want, primary, other, unaffiliated)
+        picked.update(newly_picked)
+
+    for cid in picked:
+        GAME["characters"][cid]["active"] = True
+
+    log_activity(
+        f"Applied difficulty preset: {preset['name']} "
+        f"({len(GAME['players'])} players"
+        f"{' - extrapolated' if preset.get('extrapolated') else ''})"
+    )
+    broadcast()
+
+
 def ensure_seating():
     """Assigns a fresh random circular seating arrangement if the seat
     count doesn't match the current player count (first time, or players
@@ -2254,6 +2420,29 @@ def on_shuffle_characters():
     log_activity(f"Shuffled characters to {len(GAME['players'])} players")
     broadcast()
     push_phase_reminders()
+
+
+@socketio.on("apply_difficulty_preset")
+def on_apply_difficulty_preset(data):
+    """Selects which characters are active to match a difficulty
+    preset's team ratios. Only re-validates against currently available
+    presets (matching the live player count and unlocked packs) so a
+    stale button click from before a roster change can't apply the
+    wrong composition."""
+    name = data.get("name")
+    player_count = data.get("player_count")
+    teams = data.get("teams")
+    match = next(
+        (p for p in available_difficulty_presets()
+         if p["name"] == name and p["player_count"] == player_count and p["teams"] == teams),
+        None,
+    )
+    if not match:
+        socketio.emit("character_limit_error", {
+            "message": "That preset no longer matches the current player count or unlocked packs."
+        }, room=request.sid)
+        return
+    apply_difficulty_preset(match)
 
 
 @socketio.on("grodd_mind_scramble")
